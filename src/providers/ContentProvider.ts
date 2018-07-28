@@ -31,7 +31,7 @@ export default class ForceCodeContentProvider
       }' and Name='${toolingName}'`;
       vscode.window.forceCode.conn
         .query(query)
-        .then((results: QueryResult<any>) => {
+        .then((results: QueryResult) => {
           if (results && results.totalSize === 1) {
             resolve(results.records[0][field]);
           } else {

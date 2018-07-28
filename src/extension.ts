@@ -6,6 +6,7 @@ import ApexCompletionProvider from './providers/ApexCompletion';
 import { editorUpdateApexCoverageDecorator, documentUpdateApexCoverageDecorator } from './decorators/testCoverageDecorator';
 import * as commands from './commands';
 import * as parsers from './parsers';
+import * as path from 'path';
 import { updateDecorations } from './decorators/testCoverageDecorator';
 
 export function activate(context: vscode.ExtensionContext): any {
@@ -56,7 +57,7 @@ export function activate(context: vscode.ExtensionContext): any {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.compile', (selectedResource?: vscode.Uri) => {
-        if (selectedResource.path) {
+        if (selectedResource && selectedResource.path) {
             vscode.workspace.openTextDocument(selectedResource)
                 .then(doc => commands.compile(doc, context));
         } else {
@@ -91,6 +92,12 @@ export function activate(context: vscode.ExtensionContext): any {
     // Text Coverage Decorators
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editorUpdateApexCoverageDecorator));
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(documentUpdateApexCoverageDecorator));
+
+    context.subscriptions.push(vscode.workspace.createFileSystemWatcher(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'force.json')).onDidChange(uri => { 
+        vscode.window.forceCode.userInfo = undefined
+        vscode.window.forceCode.connect(context)
+    }));
+    
 
 
     // // Peek Provider Setup

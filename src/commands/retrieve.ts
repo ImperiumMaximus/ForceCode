@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import * as path from 'path';
 import * as error from './../util/error';
+import { Metadata } from 'jsforce';
 const fetch: any = require('node-fetch');
 const ZIP: any = require('zip');
 const parseString: any = require('xml2js').parseString;
@@ -169,12 +170,12 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
                             files.push(res['fileName']);
                         }
                         // Retrieve the file by it's name
-                        vscode.window.forceCode.conn.metadata.retrieve({
+                        resolve(vscode.window.forceCode.conn.metadata.retrieve({
                             singlePackage: true,
                             specificFiles: files,
                             unpackaged: { types: retrieveTypes },
                             apiVersion: vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version,
-                        }, resolve);
+                        }).stream());
                     });
 
                 });
@@ -196,10 +197,10 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
                     var types: any[] = res.metadataObjects.map(r => {
                         return { name: r.xmlName, members: '*' };
                     });
-                    vscode.window.forceCode.conn.metadata.retrieve({
+                    resolve(vscode.window.forceCode.conn.metadata.retrieve({
                         unpackaged: { types: types },
                         apiVersion: vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version,
-                    }, resolve);
+                    }).stream());
                 });
             }
 
@@ -209,18 +210,18 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
                 parseString(data, { explicitArray: false }, function (err, dom) {
                     if (err) { reject(err); } else {
                         delete dom.Package.$;
-                        vscode.window.forceCode.conn.metadata.retrieve({
+                        resolve(vscode.window.forceCode.conn.metadata.retrieve({
                             unpackaged: dom.Package
-                        }, resolve);
+                        }).stream())
                     }
                 });
             }
 
             function packaged() {
-                vscode.window.forceCode.conn.metadata.retrieve({
+                resolve(vscode.window.forceCode.conn.metadata.retrieve({
                     packageNames: [option.description],
                     apiVersion: vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version,
-                }, resolve);
+                }).stream());
             }
 
         }

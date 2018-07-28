@@ -38,7 +38,7 @@ export default function getLog(context: vscode.ExtensionContext) {
         return connection;
     }
 
-    function getLast10Logs(force: IForceService): Promise<QueryResult<any>> {
+    function getLast10Logs(force: IForceService): Promise<QueryResult> {
 
         var queryString: string = `SELECT Id, LogLength, Request, Status, DurationMilliseconds, StartTime, Location FROM ApexLog` +
             ` WHERE LogUserId='${getLogService.userId}'` +
@@ -49,7 +49,7 @@ export default function getLog(context: vscode.ExtensionContext) {
         return force.conn.query(queryString);
     }
 
-    function displayOptions(results: QueryResult<any>): Thenable<vscode.QuickPickItem> {
+    function displayOptions(results: QueryResult): Thenable<vscode.QuickPickItem> {
         var options: vscode.QuickPickItem[] = results.records.map((record: LogRecord) => {
             return {
                 label: `Status: ${record.Status}`,

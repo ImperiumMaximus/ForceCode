@@ -134,6 +134,7 @@ export interface IForceService {
     containerAsyncRequestId?: string;
     conn?: Connection;
     userInfo?: UserInfo;
+    isLoggedIn?: boolean;
     username?: string;
     outputChannel: vscode.OutputChannel;
     statusBarItem: vscode.StatusBarItem;

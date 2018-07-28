@@ -6,9 +6,10 @@ import constants from './../models/constants';
 import { configuration } from './../services';
 import * as error from './../util/error';
 import * as commands from './../commands';
-import * as jsforce from 'jsforce';
-import { Connection, SuccessResult, ErrorResult, RecordResult, ConnectionOptions, ListMetadataQuery, FileProperties, UserInfo } from 'jsforce';
+//import * as jsforce from 'jsforce';
+import { SuccessResult, ErrorResult, RecordResult, ConnectionOptions, ListMetadataQuery, FileProperties, UserInfo } from 'jsforce';
 import { resolve } from 'dns';
+const jsforce: any = require('jsforce');
 const pjson: any = require('./../../../package.json');
 
 export default class ForceService implements forceCode.IForceService {
@@ -23,6 +24,7 @@ export default class ForceService implements forceCode.IForceService {
   public codeCoverageWarnings: forceCode.ICodeCoverageWarning[];
   public containerAsyncRequestId: string;
   public userInfo: any;
+  public isLoggedIn: boolean;
   public username: string;
   public statusBarItem: vscode.StatusBarItem;
   public outputChannel: vscode.OutputChannel;
@@ -50,7 +52,7 @@ export default class ForceService implements forceCode.IForceService {
     configuration(this)
       .then(config => {
         this.username = config.username || '';
-        this.conn = new Connection({
+        this.conn = new jsforce.Connection({
           loginUrl: config.url || 'https://login.salesforce.com'
         });
         this.statusBarItem.text = `ForceCode ${pjson.version} is Active`;
@@ -144,12 +146,13 @@ export default class ForceService implements forceCode.IForceService {
       !self.config.password
     ) {
       var connectionOptions: ConnectionOptions = {
-        loginUrl: self.config.url || 'https://login.salesforce.com'
+        loginUrl: self.config.url || 'https://login.salesforce.com',
+        version: self.config.apiVersion
       };
       if (self.config.proxyUrl) {
         connectionOptions.proxyUrl = self.config.proxyUrl;
       }
-      self.conn = new Connection(connectionOptions);
+      self.conn = new jsforce.Connection(connectionOptions);
 
       if (!config.username || !config.password) {
         vscode.window.forceCode.outputChannel.appendLine(
@@ -192,6 +195,7 @@ export default class ForceService implements forceCode.IForceService {
         );
         self.userInfo = userInfo;
         self.username = config.username;
+        self.isLoggedIn = true;
         return self;
       }
       function connectionError(err) {
@@ -200,6 +204,7 @@ export default class ForceService implements forceCode.IForceService {
           '================================================================'
         );
         self.outputChannel.appendLine(err.message);
+        self.isLoggedIn = false;
         throw err;
       }
 
