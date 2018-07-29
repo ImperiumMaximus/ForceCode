@@ -26,6 +26,7 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
     return vscode.window.forceCode.connect(context)
         .then(svc => getClassInfo(svc))
         .then(id => runCurrentTests(id))
+        .then(waitAsyncJob)
         .then(showResult)
         .then(showLog)
         .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));
@@ -62,12 +63,32 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
 
     function runCurrentTests(results) {
         var info: any = results[0];
-        var methodNames: string[] = getTestMethods(info);
+        //var methodNames: string[] = getTestMethods(info);
         vscode.window.forceCode.statusBarItem.text = 'ForceCode: $(pulse) Running Unit Tests $(pulse)';
-        return new Promise((resolve, reject) => {
-            resolve(vscode.window.forceCode.conn.tooling.runTestsAsynchronous([info.Id]));  //, methodNames);
-        });
+        return vscode.window.forceCode.conn.tooling.runTestsAsynchronous([info.Id]);
     }
+
+    function waitAsyncJob(asyncJobId) {
+        return pollAsyncJob(vscode.window.forceCode.conn.tooling
+            .query(`SELECT Status FROM AsyncApexJob WHERE Id = '${asyncJobId}'`), checkStatus);
+
+        function checkStatus(res) {
+            if (res && res.records.length) {
+                vscode.window.forceCode.outputChannel.appendLine(`Status: ${res.records[0]['Status']}`);
+                return res.records[0]['Status'] === 'Completed' || res.records[0]['Status'] === 'Aborted' || 
+                res.records[0]['Status'] === 'Failed';
+            }
+        }
+
+        function pollAsyncJob(fn, check, isDone = false) {
+            if (isDone) return new Promise((resolve, reject) => resolve(asyncJobId));
+            return new Promise((resolve, reject) =>
+                setTimeout(() => 
+                    resolve(fn.then(res => pollAsyncJob(vscode.window.forceCode.conn.tooling
+                .query(`SELECT Status FROM AsyncApexJob WHERE Id = '${asyncJobId}'`), check, check(res)))), 1000)); 
+        }
+    }
+
     // =======================================================================================================================================
     function showResult(asyncJobId) {
         return configuration().then(results => {
