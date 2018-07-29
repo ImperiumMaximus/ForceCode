@@ -51,17 +51,18 @@ export default class Logger {
         return vscode.window.forceCode.conn.tooling.query(query).then(res => {
             if (res.records.length > 0) {
                 // Trace Flag already exists
-                this.cleanupLogging(res.records[0]['Id']);
-                return 'true';
+                //this.cleanupLogging(res.records[0]['Id']);
+                //return 'true';
+                return res.records[0]['Id'];
             } else {
-                return vscode.window.forceCode.conn.tooling.sobject('debugLevel').create(options).then(record => {
+                return vscode.window.forceCode.conn.tooling.sobject('traceflag').create(options).then(record => {
                     return record['id'];
                 });
             }
         });
     }
 
-    getLastLog(result: any): any {
+    getLastLog(): any {
         var queryString: string = `SELECT Id FROM ApexLog WHERE Request = 'API' AND Location = 'SystemLog'`
             + ` AND Operation like '%executeAnonymous%'`
             + ` AND LogUserId='${vscode.window.forceCode.userInfo.id}' ORDER BY StartTime DESC, Id DESC LIMIT 1`;
@@ -75,7 +76,7 @@ export default class Logger {
 
 
     getLog(logId: string): any {
-        var url: string = `${vscode.window.forceCode.conn.instanceUrl}/sobjects/ApexLog/${logId}/Body`;
+        var url: string = `/sobjects/ApexLog/${logId}/Body`;
         return new Promise((resolve, reject) => {
             vscode.window.forceCode.conn.request(url, function (err, res) {
                 resolve(res);
