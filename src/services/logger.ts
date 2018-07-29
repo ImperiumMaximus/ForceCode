@@ -47,7 +47,7 @@ export default class Logger {
             TracedEntityId: vscode.window.forceCode.userInfo.id,
         };
 
-        const query: string = `Select Id from traceFlag where TracedEntityId = '${vscode.window.forceCode.userInfo.id}'`;
+        const query: string = `Select Id from traceFlag where TracedEntityId = '${vscode.window.forceCode.userInfo.id}' AND ExpirationDate > ${moment().format()}`;
         return vscode.window.forceCode.conn.tooling.query(query).then(res => {
             if (res.records.length > 0) {
                 // Trace Flag already exists
