@@ -22,3 +22,6 @@ settings.json
 .*
 force.json
 open.spec.js
+*.vsix
+/**/*.vsix
+
