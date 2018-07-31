@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import * as commands from './../commands';
-import model from './../models/commands';
-import * as error from './../util/error';
+import * as commands from '.';
+import model from '../models/commands';
+import * as error from '../util/error';
 
 export default function showMenu(context: vscode.ExtensionContext) {
     if (vscode.window.forceCode.conn && vscode.window.forceCode.conn['limitInfo'] && vscode.window.forceCode.conn['limitInfo'].apiUsage) {

@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import path = require('path');
-import * as error from './../util/error';
-import { configuration } from './../services';
+import * as error from '../util/error';
+import { configuration } from '../services';
 
 export default function createClass(context: vscode.ExtensionContext) {
     const CUSTOM_CLASS: string = 'Custom';

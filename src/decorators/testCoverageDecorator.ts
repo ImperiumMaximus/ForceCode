@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as forceCode from './../forceCode';
-import * as parsers from './../parsers';
+import * as forceCode from '../forceCode';
+import * as parsers from '../parsers';
 
 // create a decorator type that we use to decorate small numbers
 const coverageChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Apex Test Coverage');

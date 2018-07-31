@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as forceCode from './../forceCode';
+import * as forceCode from '../forceCode';
 import jsforce = require('jsforce');
 import path = require('path');
 

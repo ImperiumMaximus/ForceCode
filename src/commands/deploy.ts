@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import * as path from 'path';
-import * as error from './../util/error';
+import * as error from '../util/error';
 
 var tools: any = require('jsforce-metadata-tools');
 

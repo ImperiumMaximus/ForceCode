@@ -71,6 +71,11 @@
         "description": "Bundles a Resource Bundle into a Static Resource and optionally deploys"
       },
       {
+        "command": "ForceCode.describe",
+        "title": "Force: Download sObjects Describe",
+        "description": "Retrieves a global describe of the sObjects on the org to enhance autocompletion"
+      },
+      {
         "command": "ForceCode.toggleCoverage",
         "title": "Force: Toggle Test Coverage",
         "description": "Toggle the test coverage for Apex classes and triggers",
@@ -306,6 +311,7 @@
     "fs-extra": "^5.0.0",
     "globule": "^1.2.1",
     "jsforce": "^1.8.5",
+    "request-light": "^0.2.3",
     "jszip": "^3.1.5",
     "klaw": "^2.1.1",
     "lodash": "^4.17.10",

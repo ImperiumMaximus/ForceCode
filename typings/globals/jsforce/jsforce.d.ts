@@ -102,7 +102,7 @@ declare module 'jsforce/index' {
         }
         // Connection
         interface Connection {
-            soap: any;
+            soap: SoapApi;
             debuggingHeader: any;
             version: string;
             metadata: Metadata;
@@ -118,6 +118,12 @@ declare module 'jsforce/index' {
             login(name: string, password: string, callback: (err: any, res: any) => void): any;
             _baseUrl(): string;
         }
+
+        interface SoapApi {
+            SoapApi(conn: Connection);
+            _invoke(method: string, args: {}, schema?: {}, callback?: () => {}): Promise<any>;
+        }
+
         interface ConnectionOptions {
             oauth2?: OAuth2 | {}; // OAuth2 instance or options to be passed to OAuth2 constructor
             logLevel?: string; // Output logging level (DEBUG|INFO|WARN|ERROR|FATAL)
@@ -219,6 +225,37 @@ declare module 'jsforce/index' {
         interface ListMetadataQuery {
             type: string;
             folder?: string;
+        }
+
+        export class DescribeGlobalSObjectResult {
+            activateable: boolean;
+            createable: boolean;
+            custom: boolean;
+            customSetting: boolean;
+            deletable: boolean;
+            deprecatedAndHidden: boolean;
+            feedEnabled: boolean;
+            keyPrefix: string;
+            label: string;
+            labelPlural: string;
+            layoutable: boolean;
+            mergeable: boolean;
+            mruEnabled: boolean;
+            name: string;
+            queryable: boolean;
+            replicateable: boolean;
+            retrieveable: boolean;
+            searchable: boolean;
+            triggerable: boolean;
+            undeletable: boolean;
+            updateable: boolean;
+        }
+
+        export class DescribeGlobalResult {
+            encoding: string;
+            maxBatchSize: number;
+            sobjects: DescribeGlobalSObjectResult[];
+            types: string[];
         }
         
     }

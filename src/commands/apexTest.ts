@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
-import * as parsers from './../parsers';
-import * as forceCode from './../forceCode';
+import * as parsers from '../parsers';
+import * as forceCode from '../forceCode';
 // import jsforce = require('jsforce');
 // import Workspace from './../services/workspace';
-import * as error from './../util/error';
-import { configuration } from './../services';
+import * as error from '../util/error';
+import { configuration } from '../services';
 
 export default function apexTest(document: vscode.TextDocument, context: vscode.ExtensionContext): Promise<any> {
     vscode.window.forceCode.statusBarItem.text = 'ForceCode: $(pulse) Running Unit Tests $(pulse)';

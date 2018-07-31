@@ -16,6 +16,7 @@ import retrieve from './retrieve';
 import showMenu from './menu';
 import soql from './soql';
 import staticResource from './staticResource';
+import codeCompletionRefresh from './codeCompletionRefresh';
 import toql from './toql';
 import {staticResourceDeployFromFile} from './staticResource';
 
@@ -38,5 +39,6 @@ export {
     soql,
     staticResource,
     staticResourceDeployFromFile,
+    codeCompletionRefresh,
     toql,
 };

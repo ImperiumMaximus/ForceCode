@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as parsers from './../parsers';
-import * as error from './../util/error';
+import * as parsers from '../parsers';
+import * as error from '../util/error';
 
 const PROVIDER: string = 'forcecode://salesforce.com';
 

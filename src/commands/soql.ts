@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import * as path from 'path';
-import * as error from './../util/error';
+import * as error from '../util/error';
 
 export default function soql(context: vscode.ExtensionContext): Promise<any> {
     vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query';

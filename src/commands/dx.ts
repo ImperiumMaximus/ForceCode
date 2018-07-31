@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import * as error from './../util/error';
+import * as error from '../util/error';
 
 interface Arg {
     name: string;

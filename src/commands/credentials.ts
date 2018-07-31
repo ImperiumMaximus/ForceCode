@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs-extra';
 import * as path from 'path';
-import { getIcon } from './../parsers';
-import * as error from './../util/error';
-import { configuration } from './../services';
+import { getIcon } from '../parsers';
+import * as error from '../util/error';
+import { configuration } from '../services';
 
 const quickPickOptions: vscode.QuickPickOptions = {
     ignoreFocusOut: true

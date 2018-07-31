@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import Workspace from './workspace';
-import * as forceCode from './../forceCode';
-import { operatingSystem } from './../services';
-import constants from './../models/constants';
-import { configuration } from './../services';
-import * as error from './../util/error';
-import * as commands from './../commands';
+import * as forceCode from '../forceCode';
+import { operatingSystem } from '.';
+import constants from '../models/constants';
+import { configuration } from '.';
+import * as error from '../util/error';
+import * as commands from '../commands';
 //import * as jsforce from 'jsforce';
 import { SuccessResult, ErrorResult, RecordResult, ConnectionOptions, ListMetadataQuery, FileProperties, UserInfo } from 'jsforce';
 import { resolve } from 'dns';

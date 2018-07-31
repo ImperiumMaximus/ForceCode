@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import { Config } from './../forceCode';
-import * as forceCode from './../forceCode';
+import { Config } from '../forceCode';
+import * as forceCode from '../forceCode';
 import * as fs from 'fs-extra';
 import * as path from 'path';
 var _: any = require('lodash');

@@ -4,8 +4,8 @@ import path = require('path');
 import jszip = require('jszip');
 // import jsforce = require('jsforce');
 import globule = require('globule');
-import { IForceService } from './../forceCode';
-import * as error from './../util/error';
+import { IForceService } from '../forceCode';
+import * as error from '../util/error';
 
 export default function staticResourceBundleDeploy(context: vscode.ExtensionContext): any {
     // Login, then get Identity info, then enable logging, then execute the query, then get the debug log, then disable logging

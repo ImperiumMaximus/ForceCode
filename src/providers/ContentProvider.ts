@@ -1,6 +1,6 @@
 import vscode = require('vscode');
 import jsforce = require('jsforce');
-import * as error from './../util/error';
+import * as error from '../util/error';
 import { QueryResult } from 'jsforce';
 // import ReferencesDocument from './referencesDocument';
 /**

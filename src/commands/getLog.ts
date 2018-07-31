@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import jsforce = require('jsforce');
-import { IForceService } from './../forceCode';
-import * as error from './../util/error';
+import { IForceService } from '../forceCode';
+import * as error from '../util/error';
 import { Connection, QueryResult } from 'jsforce';
 const moment: any = require('moment');
 

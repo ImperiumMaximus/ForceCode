@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
-import * as error from './../util/error';
-import Logger, * as logger from './../services/logger';
-import { configuration } from './../services';
+import * as error from '../util/error';
+import Logger, * as logger from '../services/logger';
+import { configuration } from '../services';
 import * as jsforce from 'jsforce';
 import { getLog } from '.';
 import { runInThisContext } from 'vm';

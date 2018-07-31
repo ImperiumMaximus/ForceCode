@@ -74,6 +74,10 @@ export function activate(context: vscode.ExtensionContext): any {
         updateDecorations();
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.describe', () => {
+        commands.codeCompletionRefresh(context);
+    }))
+
     // AutoCompile Feature
     context.subscriptions.push(vscode.workspace.onDidSaveTextDocument((textDocument: vscode.TextDocument) => {
         const toolingType: string = parsers.getToolingType(textDocument);

@@ -1,11 +1,11 @@
 import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import * as path from 'path';
-import * as error from './../util/error';
+import * as error from '../util/error';
 const ZIP: any = require('zip');
 const fetch: any = require('node-fetch');
 
-import { getIcon, getExtension, getFolder } from './../parsers';
+import { getIcon, getExtension, getFolder } from '../parsers';
 const TYPEATTRIBUTE: string = 'type';
 
 export default function open(context: vscode.ExtensionContext) {

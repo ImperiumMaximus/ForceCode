@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import * as path from 'path';
-import * as error from './../util/error';
+import * as error from '../util/error';
 import { Metadata } from 'jsforce';
 const fetch: any = require('node-fetch');
 const ZIP: any = require('zip');

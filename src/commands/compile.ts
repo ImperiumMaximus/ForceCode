@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
-import * as parsers from './../parsers';
-import sleep from './../util/sleep';
-import { IForceService } from './../forceCode';
-import * as forceCode from './../forceCode';
-import * as error from './../util/error';
+import * as parsers from '../parsers';
+import sleep from '../util/sleep';
+import { IForceService } from '../forceCode';
+import * as forceCode from '../forceCode';
+import * as error from '../util/error';
 import diff from './diff';
 // import jsforce = require('jsforce');
 const parseString: any = require('xml2js').parseString;
