@@ -9,7 +9,7 @@ const parseString: any = require('xml2js').parseString;
 var tools: any = require('jsforce-metadata-tools');
 var elegantSpinner: any = require('elegant-spinner');
 
-export default function retrieve(context: vscode.ExtensionContext, resource?: vscode.Uri) {
+export default function retrieve(document: vscode.TextDocument, context: vscode.ExtensionContext) {
     vscode.window.forceCode.statusBarItem.text = 'Retrieve Started';
     let option: any;
     const _consoleInfoReference: any = console.info;
@@ -17,6 +17,11 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
     const _consoleLogReference: any = console.log;
     const spinner: any = elegantSpinner();
     var interval: any = undefined;
+    var baseName: any = undefined;
+    if (document && document.fileName) {
+        baseName = document.fileName.slice(document.fileName.lastIndexOf(path.sep) + 1);
+        baseName = baseName.slice(0, baseName.lastIndexOf('.'));
+    }
     const statsPath: string = `${vscode.workspace.rootPath}${path.sep}RetrieveStatistics.log`;
     var logger: any = (function (fs) {
         var buffer: string = '';
@@ -70,7 +75,7 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
     }
 
     function showPackageOptions(conn) {
-        if (resource !== undefined) { return undefined; }
+        //if (resource !== undefined) { return undefined; }
         return getPackages(conn).then(packages => {
             let options: vscode.QuickPickItem[] = packages
                 .map(pkg => {
@@ -97,6 +102,13 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
                 detail: `All Unpackaged`,
                 description: 'unpackaged',
             });
+            if (document !== undefined) {
+                options.push({
+                    label: `$(code) Get ${decodeURI(baseName)} from org`,
+                    detail: `Retrieve single file`,
+                    description: 'file',
+                });
+            }
             let config: {} = {
                 matchOnDescription: true,
                 matchOnDetail: true,
@@ -104,7 +116,7 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
             };
             return vscode.window.showQuickPick(options, config);
         }).then(function (res) {
-            if (res.description === 'manual') {
+            if (res && res.description === 'manual') {
                 return vscode.window.showInputBox({
                     ignoreFocusOut: true,
                     prompt: 'enter your package name',
@@ -125,25 +137,31 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
         registerProxy();
         vscode.window.forceCode.conn.metadata.pollTimeout = (vscode.window.forceCode.config.pollTimeout || 600) * 1000;
 
-        if (opt) {
+        if (opt && opt.description !== 'file') {
             clearInterval(interval);
             interval = setInterval(function () {
                 vscode.window.forceCode.statusBarItem.text = `Retrieve ${option.description} ` + spinner();
             }, 50);
             return new Promise(pack);
-        } else if (resource) {
+        } else if (opt && opt.description === 'file') {
             return new Promise(function (resolve, reject) {
+                clearInterval(interval);
+                interval = setInterval(function () {
+                    vscode.window.forceCode.statusBarItem.text = `Retrieve ${decodeURI(baseName)} ` + spinner();
+                }, 50);
                 vscode.window.forceCode.conn.metadata.describe().then(describe => {
                     // Get the Metadata Object type
-                    let extension: string = resource.fsPath.slice(resource.fsPath.lastIndexOf('.')).replace('.', '');
+                    let srcSubFolder: string = document.fileName.replace(vscode.window.forceCode.workspaceRoot, '').substring(1);
+                    srcSubFolder = srcSubFolder.slice(0, srcSubFolder.indexOf(path.sep));
+                    //let extension: string = document.fileName.slice(document.fileName.lastIndexOf('.')).replace('.', '');
                     var metadataTypes: any[] = describe.metadataObjects
-                        .filter(o => o.suffix === extension);
+                        .filter(o => o.directoryName === srcSubFolder);
 
                     var listTypes: any[] = metadataTypes
                         .map(o => {
                             return {
                                 type: o.xmlName,
-                                folder: o.directoryName,
+                                folder: o.directoryName, 
                             };
                         });
 
@@ -151,12 +169,12 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
                         .map(o => {
                             return {
                                 name: o.xmlName,
-                                members: '*',
+                                members: baseName,
                             };
                         });
                     // List the Metadata by that type
                     return vscode.window.forceCode.conn.metadata.list(listTypes).then(res => {
-                        let fileName: string = resource.fsPath.slice(resource.fsPath.lastIndexOf(path.sep) + 1);
+                        let fileName: string = document.fileName.slice(document.fileName.lastIndexOf(path.sep) + 1);
                         var files: string[] = [];
                         // Match the metadata against the filepath
                         if (Array.isArray(res)) {
@@ -172,7 +190,7 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
                         // Retrieve the file by it's name
                         resolve(vscode.window.forceCode.conn.metadata.retrieve({
                             singlePackage: true,
-                            specificFiles: files,
+                            //specificFiles: files,
                             unpackaged: { types: retrieveTypes },
                             apiVersion: vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version,
                         }).stream());
@@ -248,7 +266,9 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
                         if (option && option.description) {
                             name = path.normalize(name).replace(option.description + path.sep, '');
                         }
-                        fs.outputFileSync(`${vscode.window.forceCode.workspaceRoot}${path.sep}${name}`, data);
+                        if (option.description !== 'file' || (option.description === 'file' && entry.getName() !== 'package.xml')) {
+                            fs.outputFileSync(`${vscode.window.forceCode.workspaceRoot}${path.sep}${name}`, data);
+                        }
                     }
                 });
                 resolve({ success: true });
@@ -262,7 +282,11 @@ export default function retrieve(context: vscode.ExtensionContext, resource?: vs
         clearInterval(interval);
         if (res.success) {
             setTimeout(function() {
-                vscode.window.forceCode.statusBarItem.text = `Retrieve ${option.description} $(thumbsup)`;
+                if (option && option.description !== 'file') {
+                    vscode.window.forceCode.statusBarItem.text = `Retrieve ${option.description} $(thumbsup)`;
+                } else if (option && option.description === 'file') {
+                    vscode.window.forceCode.statusBarItem.text = `Retrieve ${decodeURI(baseName)} $(thumbsup)`;
+                }
             }, 100);
         } else {
             setTimeout(function() {

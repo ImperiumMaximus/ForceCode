@@ -41,7 +41,7 @@ export function activate(context: vscode.ExtensionContext): any {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.retrievePackage', () => {
-        commands.retrieve(context);
+        commands.retrieve(vscode.window.activeTextEditor.document, context);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.staticResource', () => {
@@ -52,8 +52,8 @@ export function activate(context: vscode.ExtensionContext): any {
         commands.apexTest(vscode.window.activeTextEditor.document, context);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.refresh', (selectedResource?: vscode.Uri) => {
-        commands.retrieve(context, selectedResource);
+    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.refresh', () => {
+        commands.retrieve(vscode.window.activeTextEditor.document, context);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.compile', (selectedResource?: vscode.Uri) => {
@@ -97,11 +97,12 @@ export function activate(context: vscode.ExtensionContext): any {
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editorUpdateApexCoverageDecorator));
     context.subscriptions.push(vscode.workspace.onDidChangeTextDocument(documentUpdateApexCoverageDecorator));
 
-    context.subscriptions.push(vscode.workspace.createFileSystemWatcher(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'force.json')).onDidChange(uri => { 
-        vscode.window.forceCode.userInfo = undefined
-        vscode.window.forceCode.connect(context)
-    }));
-    
+    if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
+        context.subscriptions.push(vscode.workspace.createFileSystemWatcher(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'force.json')).onDidChange(uri => { 
+            vscode.window.forceCode.userInfo = undefined
+            vscode.window.forceCode.connect(context)
+        }));
+    }
 
 
     // // Peek Provider Setup
