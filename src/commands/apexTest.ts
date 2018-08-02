@@ -6,9 +6,13 @@ import * as forceCode from '../forceCode';
 import * as error from '../util/error';
 import { configuration } from '../services';
 
-export default function apexTest(document: vscode.TextDocument, context: vscode.ExtensionContext): Promise<any> {
+export default function apexTest(editor: vscode.TextEditor, context: vscode.ExtensionContext): Promise<any> {
     vscode.window.forceCode.statusBarItem.text = 'ForceCode: $(pulse) Running Unit Tests $(pulse)';
-
+    editor.setDecorations(vscode.window.createTextEditorDecorationType({
+        isWholeLine: true,
+        backgroundColor: `rgba(255,0,0, 0.5)`
+    }), [editor.document.lineAt(1).range]);
+    let document = editor.document;
     // const body: string = document.getText();
     // const ext: string = parsers.getFileExtension(document);
     const toolingType: string = parsers.getToolingType(document);
