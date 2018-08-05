@@ -214,6 +214,8 @@ export default class ForceService implements forceCode.IForceService {
           .then(res => {
             if (res && res.records.length && res.records[0]['NamespacePrefix']) {
               svc.config.prefix = res.records[0]['NamespacePrefix'];
+            } else {
+              svc.config.prefix = '';
             }
             return svc;
           })

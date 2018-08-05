@@ -63,6 +63,7 @@ interface ICodeCoverage {
     soqlInfo: any[];
     soslInfo: any[];
     type: string;
+    crc: number;
 }
 
 interface ICodeCoverageWarning {

@@ -49,7 +49,7 @@ export function activate(context: vscode.ExtensionContext): any {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.apexTest', () => {
-        commands.apexTest(vscode.window.activeTextEditor, context);
+        commands.apexTest(vscode.window.activeTextEditor.document, context);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.refresh', () => {

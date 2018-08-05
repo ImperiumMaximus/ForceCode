@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as forceCode from '../forceCode';
 import * as parsers from '../parsers';
+import {CRC} from 'crc-full';
 
 // create a decorator type that we use to decorate small numbers
 const coverageChannel: vscode.OutputChannel = vscode.window.createOutputChannel('Apex Test Coverage');
@@ -23,6 +24,8 @@ const uncoveredLineStyle: vscode.TextEditorDecorationType = vscode.window.create
 
 // When this subscription is created (when the extension/Code boots), try to decorate the document
 let timeout: any = undefined;
+//let crc = new CRC('CRC-32_SF', 32, 0x04C11DB7, 0xFFFFFFFF, 0xFFFFFFFF, true, true);
+let crc = CRC.default("CRC32");
 let activeEditor: vscode.TextEditor = vscode.window.activeTextEditor;
 if (activeEditor) {
     triggerUpdateDecorations();
@@ -72,7 +75,8 @@ export function getUncoveredLineOptions(document: vscode.TextDocument) {
             let namespaceMatch: boolean = (fileCoverage.namespace ? fileCoverage.namespace : '') === vscode.window.forceCode.config.prefix;
             let nameMatch: boolean = fileCoverage.name.toLowerCase() === parsers.getFileName(document).toLowerCase();
             let typeMatch: boolean = fileCoverage.type === parsers.getCoverageType(document);
-            if (namespaceMatch && nameMatch && typeMatch) {
+            let crcMatch: boolean = !document.isDirty && (fileCoverage.crc === crc.compute(Buffer.from(document.getText(),'ascii')) >>> 0);
+            if (namespaceMatch && nameMatch && typeMatch && crcMatch) {
                 fileCoverage.locationsNotCovered.forEach(notCovered => {
                     let lineNumber: number = notCovered.line.valueOf() - 1;
                     let decorationRange: vscode.DecorationOptions = { range: document.lineAt(Number(lineNumber)).range, hoverMessage: 'Line ' + lineNumber + ' not covered by a test' };
