@@ -226,38 +226,6 @@ declare module 'jsforce/index' {
             type: string;
             folder?: string;
         }
-
-        export class DescribeGlobalSObjectResult {
-            activateable: boolean;
-            createable: boolean;
-            custom: boolean;
-            customSetting: boolean;
-            deletable: boolean;
-            deprecatedAndHidden: boolean;
-            feedEnabled: boolean;
-            keyPrefix: string;
-            label: string;
-            labelPlural: string;
-            layoutable: boolean;
-            mergeable: boolean;
-            mruEnabled: boolean;
-            name: string;
-            queryable: boolean;
-            replicateable: boolean;
-            retrieveable: boolean;
-            searchable: boolean;
-            triggerable: boolean;
-            undeletable: boolean;
-            updateable: boolean;
-        }
-
-        export class DescribeGlobalResult {
-            encoding: string;
-            maxBatchSize: number;
-            sobjects: DescribeGlobalSObjectResult[];
-            types: string[];
-        }
-        
     }
     export = jsforce;
 }

@@ -18,9 +18,25 @@ export default function retrieve(document: vscode.TextDocument, context: vscode.
     const spinner: any = elegantSpinner();
     var interval: any = undefined;
     var baseName: any = undefined;
+    var srcSubFolder: any = undefined;
     if (document && document.fileName) {
+        srcSubFolder = document.fileName.replace(vscode.window.forceCode.workspaceRoot, '').substring(1);
+        srcSubFolder = srcSubFolder.slice(0, srcSubFolder.indexOf(path.sep));
         baseName = document.fileName.slice(document.fileName.lastIndexOf(path.sep) + 1);
-        baseName = baseName.slice(0, baseName.lastIndexOf('.'));
+        // special case for lightning components
+        if (srcSubFolder === 'aura') {
+            if (baseName.endsWith('Controller.js')) {
+                baseName = baseName.slice(0, baseName.lastIndexOf('Controller.js'));
+            } else if (baseName.endsWith('Helper.js')) {
+                baseName = baseName.slice(0, baseName.lastIndexOf('Helper.js'));
+            } else if (baseName.endsWith('Renderer.js')) {
+                baseName = baseName.slice(0, baseName.lastIndexOf('Renderer.js'));
+            } else {
+                baseName = baseName.slice(0, baseName.lastIndexOf('.'));
+            }
+        } else {
+            baseName = baseName.slice(0, baseName.lastIndexOf('.'));
+        }
     }
     const statsPath: string = `${vscode.workspace.rootPath}${path.sep}RetrieveStatistics.log`;
     var logger: any = (function (fs) {
@@ -102,7 +118,7 @@ export default function retrieve(document: vscode.TextDocument, context: vscode.
                 detail: `All Unpackaged`,
                 description: 'unpackaged',
             });
-            if (document !== undefined) {
+            if (document !== undefined && !document.fileName.endsWith('-meta.xml')) {
                 options.push({
                     label: `$(code) Get ${decodeURI(baseName)} from org`,
                     detail: `Retrieve single file`,
@@ -151,9 +167,6 @@ export default function retrieve(document: vscode.TextDocument, context: vscode.
                 }, 50);
                 vscode.window.forceCode.conn.metadata.describe().then(describe => {
                     // Get the Metadata Object type
-                    let srcSubFolder: string = document.fileName.replace(vscode.window.forceCode.workspaceRoot, '').substring(1);
-                    srcSubFolder = srcSubFolder.slice(0, srcSubFolder.indexOf(path.sep));
-                    //let extension: string = document.fileName.slice(document.fileName.lastIndexOf('.')).replace('.', '');
                     var metadataTypes: any[] = describe.metadataObjects
                         .filter(o => o.directoryName === srcSubFolder);
 
