@@ -1,18 +1,4 @@
-[![Logo](https://raw.githubusercontent.com/celador/ForceCode/master/images/logo-type.png)](https://marketplace.visualstudio.com/items?itemName=JohnAaronNelson.ForceCode)
-
-# ForceCode for Visual Studio Code
-
-[![Version](https://vsmarketplacebadge.apphb.com/version/JohnAaronNelson.ForceCode.png)](https://marketplace.visualstudio.com/items?itemName=JohnAaronNelson.ForceCode)
-[![Installs](https://vsmarketplacebadge.apphb.com/installs/JohnAaronNelson.ForceCode.png)](https://marketplace.visualstudio.com/items?itemName=JohnAaronNelson.ForceCode)
-[![Ratings](https://vsmarketplacebadge.apphb.com/rating/JohnAaronNelson.ForceCode.png)](https://vsmarketplacebadge.apphb.com/rating/JohnAaronNelson.ForceCode.svg)
-
-## Deprecation
-
-This extension has been deprecated in favor of [Salesforce DX](https://marketplace.visualstudio.com/items?itemName=salesforce.salesforcedx-vscode) 
-
-This extension will no longer receive any updates.  You may continue to use this extension for as long as you want.  
-
-If you would like to see this project continue, please let me know.
+![Logo](https://raw.githubusercontent.com/celador/ForceCode/master/images/logo-type.png)
 
 ## Overview
 
