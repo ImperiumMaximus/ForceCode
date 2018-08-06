@@ -27,6 +27,10 @@ export function activate(context: vscode.ExtensionContext): any {
         commands.executeAnonymous(vscode.window.activeTextEditor.document, context);
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.soql', () => {
+        commands.soql(context);
+    }));
+
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.getLog', () => {
         commands.getLog(context);
     }));

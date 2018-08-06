@@ -83,6 +83,11 @@
           "light": "./images/coverage.svg",
           "dark": "./images/coverage.svg"
         }
+      },
+      {
+        "command": "ForceCode.soql",
+        "title": "Force: Run a SOQL Query",
+        "description": "Run SOQL Query Under cursor"
       }
     ],
     "keybindings": [
@@ -125,6 +130,11 @@
         "command": "ForceCode.staticResource",
         "key": "alt+cmd+b",
         "win": "ctrl+shift+b"
+      },
+      {
+        "command": "ForceCode.soql",
+        "key": "alt+cmd+q",
+        "win": "ctrl+shift+q"
       }
     ],
     "configuration": {
