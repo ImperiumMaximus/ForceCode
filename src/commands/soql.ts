@@ -2,9 +2,11 @@ import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import * as path from 'path';
 import * as error from '../util/error';
+var elegantSpinner: any = require('elegant-spinner');
 
 export default function soql(context: vscode.ExtensionContext): Promise<any> {
-    vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query';
+    var interval: any = undefined;
+    const spinner: any = elegantSpinner();
     return vscode.window.forceCode.connect(context)
         .then(svc => getSoqlQuery(svc))
         .then(finished, onError);
@@ -48,7 +50,14 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
 
             query = query.trim().replace(';', '');
 
-            return vscode.window.forceCode.conn.query(query).then(res => {
+            clearInterval(interval);
+            interval = setInterval(function () {
+                vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query ' + spinner();
+            }, 50);
+            return vscode.window.forceCode.conn.query(query, (err, res) => {
+                if (err) {
+                    reject(err);
+                }
                 resolve(res);
             });
         });
@@ -57,12 +66,16 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
     function finished(res) {
         // Take the results
         // And write them to a file
+        clearInterval(interval);
+        vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query $(thumbsup)';
         vscode.window.forceCode.outputChannel.appendLine(JSON.stringify(res));
     }
     function onError(err) {
         // Take the results
         // And write them to a file
         error.outputError({ message: err }, vscode.window.forceCode.outputChannel);
+        clearInterval(interval);
+        vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query $(thumbsdown)';
     }
     // =======================================================================================================================================
 }
