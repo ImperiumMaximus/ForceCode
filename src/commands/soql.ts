@@ -10,24 +10,54 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
         .then(finished, onError);
 
     function getSoqlQuery(svc) {
-        let options: vscode.InputBoxOptions = {
-            placeHolder: 'Enter SOQL query',
-            prompt: `Enter a SOQL query to get the results in a json file in the soql folder`,
-        };
-        return vscode.window.showInputBox(options).then(query => {
+        return new Promise((resolve, reject) => {
+            let startLine: number = vscode.window.activeTextEditor.selection.start.line;
+            let endLine: number = startLine;
+            let query: string = '';
+            let currentLineText: string;
+
+            if (startLine > 0) {   
+                do  {
+                    currentLineText = vscode.window.activeTextEditor.document.lineAt(--startLine).text;
+                } while (startLine > 0 && !currentLineText.trim().endsWith(';'));
+
+                if (startLine > 0) {
+                    startLine++;
+                }
+
+                if (startLine < 0) {
+                    reject('Cannot find start boundary of query under cursor');
+                }
+            }
+
+            if (endLine < (vscode.window.activeTextEditor.document.lineCount - 1)) {
+                currentLineText = vscode.window.activeTextEditor.document.lineAt(endLine).text;
+                while (endLine < (vscode.window.activeTextEditor.document.lineCount - 1) && !currentLineText.trim().endsWith(';')) {
+                    currentLineText = vscode.window.activeTextEditor.document.lineAt(++endLine).text;
+                }
+
+                if (endLine > vscode.window.activeTextEditor.document.lineCount) {
+                    reject('Cannot find end boundary of query under cursor');
+                }
+            }
+            
+
+            while (startLine <= endLine) {
+                query += vscode.window.activeTextEditor.document.lineAt(startLine++).text + ' ';
+            }
+
+            query = query.trim().replace(';', '');
+
             return vscode.window.forceCode.conn.query(query).then(res => {
-                let filePath: string = vscode.workspace.rootPath + path.sep + 'soql' + path.sep + Date.now() + '.json';
-                return fs.outputJson(filePath, res.records, (f) => {
-                    return vscode.workspace.openTextDocument(filePath).then(document => {
-                        return vscode.window.showTextDocument(document, vscode.ViewColumn.Three);
-                    });
-                });
+                resolve(res);
             });
         });
+        
     }
-    function finished() {
+    function finished(res) {
         // Take the results
         // And write them to a file
+        vscode.window.forceCode.outputChannel.appendLine(JSON.stringify(res));
     }
     function onError(err) {
         // Take the results
