@@ -28,6 +28,7 @@ const TOOLS_DIR = 'tools';
 const SOBJECTS_DIR = 'sobjects';
 const STANDARDOBJECTS_DIR = 'standardObjects';
 const CUSTOMOBJECTS_DIR = 'customObjects';
+const JSONS_DIR = 'json';
 
 export class FauxClassGenerator {
 
@@ -86,11 +87,18 @@ export class FauxClassGenerator {
       sobjectsFolderPath,
       STANDARDOBJECTS_DIR
     );
+    const standardJSONsSObjectsFolderPath = path.join(
+      standardSObjectsFolderPath,
+      JSONS_DIR
+    );
     const customSObjectsFolderPath = path.join(
       sobjectsFolderPath,
       CUSTOMOBJECTS_DIR
     );
-
+    const customJSONsSObjectsFolderPath = path.join(
+      customSObjectsFolderPath,
+      JSONS_DIR
+    );
     if (
       !fs.existsSync(projectPath) ||
       !fs.existsSync(path.join(projectPath, SFDX_PROJECT_FILE))
@@ -144,12 +152,14 @@ export class FauxClassGenerator {
     this.logFetchedObjects(standardSObjects, customSObjects);
 
     try {
+      this.generateJSONs(standardSObjects, standardJSONsSObjectsFolderPath);
       this.generateFauxClasses(standardSObjects, standardSObjectsFolderPath);
     } catch (e) {
       return this.errorExit(e);
     }
 
     try {
+      this.generateJSONs(customSObjects, customJSONsSObjectsFolderPath);
       this.generateFauxClasses(customSObjects, customSObjectsFolderPath);
     } catch (e) {
       return this.errorExit(e);
@@ -224,6 +234,20 @@ export class FauxClassGenerator {
     for (const sobject of sobjects) {
       if (sobject.name) {
         this.generateFauxClass(targetFolder, sobject);
+      }
+    }
+  }
+
+  private generateJSONs(sobjects: SObject[], targetFolder: string): void {
+    if (!this.createIfNeededOutputFolder(targetFolder)) {
+      throw nls.localize('no_sobject_output_folder_text', targetFolder);
+    }
+    if (!fs.existsSync(targetFolder)) {
+      fs.mkdirSync(targetFolder);
+    }
+    for (const sobject of sobjects) {
+      if (sobject.name) {
+        fs.writeJSONSync(path.join(targetFolder, sobject.name + '.json'), sobject);
       }
     }
   }
