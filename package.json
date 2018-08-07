@@ -301,6 +301,7 @@
   },
   "dependencies": {
     "archiver": "^2.1.1",
+    "chalk": "^2.4.1",
     "crc-full": "^1.0.0",
     "elegant-spinner": "^1.0.1",
     "fs-extra": "^5.0.0",
@@ -316,7 +317,6 @@
     "node-zip": "^1.1.1",
     "os": "^0.1.1",
     "request-light": "^0.2.3",
-    "salesforcedx": "^43.7.1",
     "sequin": "^0.1.1",
     "typescript": "^2.9.2",
     "vscode": "^1.1.18",
