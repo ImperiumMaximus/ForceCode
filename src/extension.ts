@@ -8,6 +8,7 @@ import * as commands from './commands';
 import * as parsers from './parsers';
 import * as path from 'path';
 import { updateDecorations } from './decorators/testCoverageDecorator';
+import SoqlCompletionProvider from './providers/SoqlCompletion';
 
 export function activate(context: vscode.ExtensionContext): any {
     vscode.window.forceCode = new ForceService();
@@ -96,6 +97,7 @@ export function activate(context: vscode.ExtensionContext): any {
 
     // Code Completion Provider
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('apex', new ApexCompletionProvider(), '.', '@'));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('soql', new SoqlCompletionProvider(), '.'));
 
     // Text Coverage Decorators
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editorUpdateApexCoverageDecorator));
