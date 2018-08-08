@@ -9,7 +9,7 @@ const parseString: any = require('xml2js').parseString;
 var tools: any = require('jsforce-metadata-tools');
 var elegantSpinner: any = require('elegant-spinner');
 
-export default function retrieve(document: vscode.TextDocument, context: vscode.ExtensionContext) {
+export default function retrieve(context: vscode.ExtensionContext, document?: vscode.TextDocument) {
     vscode.window.forceCode.statusBarItem.text = 'Retrieve Started';
     let option: any;
     const _consoleInfoReference: any = console.info;

@@ -41,7 +41,11 @@ export function activate(context: vscode.ExtensionContext): any {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.retrievePackage', () => {
-        commands.retrieve(vscode.window.activeTextEditor.document, context);
+        if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document) {
+            commands.retrieve(context, vscode.window.activeTextEditor.document);
+        } else {
+            commands.retrieve(context);
+        }
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.staticResource', () => {
@@ -53,7 +57,11 @@ export function activate(context: vscode.ExtensionContext): any {
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.refresh', () => {
-        commands.retrieve(vscode.window.activeTextEditor.document, context);
+        if (vscode.window.activeTextEditor && vscode.window.activeTextEditor.document) {
+            commands.retrieve(context, vscode.window.activeTextEditor.document);
+        } else {
+            commands.retrieve(context);
+        }
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.compile', (selectedResource?: vscode.Uri) => {
