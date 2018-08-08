@@ -13,7 +13,7 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
 
     function getSoqlQuery(svc) {
         return new Promise((resolve, reject) => {
-            let query = getQueryUnderCursor(vscode.window.activeTextEditor.selection.start);
+            let query = getQueryUnderCursor(vscode.window.activeTextEditor.selection.start).query.replace('\n','').replace(';','').trim();
 
             clearInterval(interval);
             interval = setInterval(function () {
@@ -45,7 +45,7 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
     // =======================================================================================================================================
 }
 
-export function getQueryUnderCursor(pos: vscode.Position): string {
+export function getQueryUnderCursor(pos: vscode.Position): any {
     let startLine: number = pos.line;
     let endLine: number = startLine;
     let query: string = '';
@@ -76,10 +76,13 @@ export function getQueryUnderCursor(pos: vscode.Position): string {
         }*/
     }
     
-
-    while (startLine <= endLine) {
-        query += vscode.window.activeTextEditor.document.lineAt(startLine++).text + ' ';
+    let curLine = startLine;
+    while (curLine <= endLine) {
+        query += vscode.window.activeTextEditor.document.lineAt(curLine++).text + '\n';
     }
 
-    return query.trim().replace(';', '');
+    return { startLine: startLine, 
+             endLine: endLine, 
+             query: query.trim().replace(';', '')
+        };
 }

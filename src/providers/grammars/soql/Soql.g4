@@ -137,8 +137,12 @@ whereConditionExpressionWithSubquery
 	:	fieldItem IN whereSubquery
 	;
 
+whereSubqueryStatement
+	:	WHERE whereConditionExpressionsSimple
+	;
+
 whereSubquery
-	:	'(' SELECT fieldName FROM objectType WHERE whereConditionExpressionsSimple ')'
+	:	'(' SELECT fieldName FROM objectType whereSubqueryStatement? ')'
 	;
 
 conditionExpression

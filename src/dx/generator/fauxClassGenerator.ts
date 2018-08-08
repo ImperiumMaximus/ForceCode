@@ -23,12 +23,12 @@ export interface CancellationToken {
   isCancellationRequested: boolean;
 }
 
-const SFDX_DIR = '.sfdx';
-const TOOLS_DIR = 'tools';
-const SOBJECTS_DIR = 'sobjects';
-const STANDARDOBJECTS_DIR = 'standardObjects';
-const CUSTOMOBJECTS_DIR = 'customObjects';
-const JSONS_DIR = 'json';
+export const SFDX_DIR = '.sfdx';
+export const TOOLS_DIR = 'tools';
+export const SOBJECTS_DIR = 'sobjects';
+export const STANDARDOBJECTS_DIR = 'standardObjects';
+export const CUSTOMOBJECTS_DIR = 'customObjects';
+export const JSONS_DIR = 'json';
 
 export class FauxClassGenerator {
 
