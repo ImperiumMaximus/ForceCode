@@ -16,12 +16,8 @@ export class SoqlQuery {
         this.queryLines.push(...lines);
     }
 
-    public flatten(): string {
-        return this.queryLines.join('\n');
-    }
-
-    public prettyPrint(): string {
-        return this.queryLines.join(' ').replace(';', '').trim();
+    public prettyPrint(joinCharacter?: string): string {
+        return this.queryLines.join(joinCharacter || ' ').replace(';', '').trim();
     }
 
     public getLine(i: number): string {
@@ -45,7 +41,7 @@ export class SoqlQuery {
         return this.endLine;
     }
 
-    public positionAsFlatten(pos: vscode.Position, relative?: boolean): vscode.Position {
+    public flattenPosition(pos: vscode.Position, relative?: boolean): vscode.Position {
         let line = relative ? pos.line : pos.line - this.startLine;
         let character = pos.character;
 
@@ -53,7 +49,7 @@ export class SoqlQuery {
             character += this.queryLines[i].length;
         }
 
-        return new vscode.Position(0, character);
+        return new vscode.Position(1, character);
     }
 }
 
