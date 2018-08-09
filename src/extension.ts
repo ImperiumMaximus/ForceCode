@@ -97,7 +97,7 @@ export function activate(context: vscode.ExtensionContext): any {
 
     // Code Completion Provider
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('apex', new ApexCompletionProvider(), '.', '@'));
-    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('soql', new SoqlCompletionProvider(), '.'));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('soql', new SoqlCompletionProvider(), '.', ' '));
 
     // Text Coverage Decorators
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editorUpdateApexCoverageDecorator));

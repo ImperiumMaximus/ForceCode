@@ -2,7 +2,60 @@ import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import * as path from 'path';
 import * as error from '../util/error';
+import { start } from 'repl';
 var elegantSpinner: any = require('elegant-spinner');
+
+export class SoqlQuery {
+    private startLine: number;
+    private endLine: number;
+    private queryLines: string[] = [];
+
+    constructor(start: number, end: number, lines: string[]) {
+        this.startLine = start;
+        this.endLine = end;
+        this.queryLines.push(...lines);
+    }
+
+    public flatten(): string {
+        return this.queryLines.join('\n');
+    }
+
+    public prettyPrint(): string {
+        return this.queryLines.join(' ').replace(';', '').trim();
+    }
+
+    public getLine(i: number): string {
+        if (i >= 0 && i < this.queryLines.length) {
+            return this.queryLines[i];
+        }
+        return null
+    }
+
+    public setLine(i: number, line: string): void {
+        if (i >= 0 && i < this.queryLines.length) {
+            this.queryLines[i] = line;
+        }
+    }
+
+    public getStartLine(): number {
+        return this.startLine;
+    }
+
+    public getEndLine(): number {
+        return this.endLine;
+    }
+
+    public positionAsFlatten(pos: vscode.Position, relative?: boolean): vscode.Position {
+        let line = relative ? pos.line : pos.line - this.startLine;
+        let character = pos.character;
+
+        for (var i = 0; i < line; i++) {
+            character += this.queryLines[i].length;
+        }
+
+        return new vscode.Position(0, character);
+    }
+}
 
 export default function soql(context: vscode.ExtensionContext): Promise<any> {
     var interval: any = undefined;
@@ -13,7 +66,7 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
 
     function getSoqlQuery(svc) {
         return new Promise((resolve, reject) => {
-            let query = getQueryUnderCursor(vscode.window.activeTextEditor.selection.start).query.replace('\n','').replace(';','').trim();
+            let query = getQueryUnderCursor(vscode.window.activeTextEditor.selection.start).prettyPrint();
 
             clearInterval(interval);
             interval = setInterval(function () {
@@ -45,7 +98,7 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
     // =======================================================================================================================================
 }
 
-export function getQueryUnderCursor(pos: vscode.Position): any {
+export function getQueryUnderCursor(pos: vscode.Position): SoqlQuery {
     let startLine: number = pos.line;
     let endLine: number = startLine;
     let query: string = '';
@@ -77,12 +130,10 @@ export function getQueryUnderCursor(pos: vscode.Position): any {
     }
     
     let curLine = startLine;
+    let lines: string[] = [];
     while (curLine <= endLine) {
-        query += vscode.window.activeTextEditor.document.lineAt(curLine++).text + '\n';
+        lines.push(vscode.window.activeTextEditor.document.lineAt(curLine++).text);
     }
 
-    return { startLine: startLine, 
-             endLine: endLine, 
-             query: query.trim().replace(';', '')
-        };
+    return new SoqlQuery(startLine, endLine, lines);
 }
