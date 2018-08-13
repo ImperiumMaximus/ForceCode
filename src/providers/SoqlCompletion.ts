@@ -10,14 +10,70 @@ import { SFDX_DIR, TOOLS_DIR, SOBJECTS_DIR, STANDARDOBJECTS_DIR, CUSTOMOBJECTS_D
 import * as path from 'path';
 import * as fs from 'fs-extra';
 var jsonQuery = require('json-query');
+const moment: any = require('moment');
 
-enum FieldContext {
+const enum FieldContext {
     UNKNOWN,
     SELECT,
     WHERE,
     GROUPBY,
     ORDERBY,
     FROM
+}
+
+enum ConditionalOperator {
+    EQUAL = '=',
+    NEQUAL = '!=',
+    NEQUAL2 = '<>', 
+    LT = '<',
+    LTE = '<=',
+    GT = '>',
+    GTE = '>=',
+    IN = 'IN',
+    NOTIN = 'NOT IN',
+    INCLUDES = 'INCLUDES',
+    EXCLUDES = 'EXCLUDES',
+    LIKE = 'LIKE'
+}
+
+enum DateLiterals {
+    L90D = 'LAST_90_DAYS',
+    LFQ  = 'LAST_FISCAL_QUARTER',
+    LFY  = 'LAST_FISCAL_YEAR',
+    LM   = 'LAST_MONTH',
+    LND  = 'LAST_N_DAYS:n',
+    LNFQ = 'LAST_N_FISCAL_QUARTERS:n',
+    LNFY = 'LAST_N_FISCAL_YEARS:n',
+    LNM  = 'LAST_N_MONTHS:n',
+    LNQ  = 'LAST_N_QUARTERS:n',
+    LNW  = 'LAST_N_WEEKS:n',
+    LNY  = 'LAST_N_YEARS:n',
+    LQ   = 'LAST_QUARTER',
+    LW   = 'LAST_WEEK',
+    LY   = 'LAST_YEAR',
+    N90D = 'NEXT_90_DAYS',
+    NFQ  = 'NEXT_FISCAL_QUARTER',
+    NFY  = 'NEXT_FISCAL_YEAR',
+    NM   = 'NEXT_MONTH',
+    NND  = 'NEXT_N_DAYS:n',
+    NNFQ = 'NEXT_N_FISCAL_QUARTERS:n',
+    NNFY = 'NEXT_N_FISCAL_YEARS:n',
+    NNM  = 'NEXT_N_MONTHS:n',
+    NNQ  = 'NEXT_N_QUARTERS:n',
+    NNW  = 'NEXT_N_WEEKS:n',
+    NNY  = 'NEXT_N_YEARS:n',
+    NQ   = 'NEXT_QUARTER',
+    NW   = 'NEXT_WEEK',
+    NY   = 'NEXT_YEAR',
+    TFQ  = 'THIS_FISCAL_QUARTER',
+    TFY  = 'THIS_FISCAL_YEAR',
+    TM   = 'THIS_MONTH',
+    TQ   = 'THIS_QUARTER',
+    TW   = 'THIS_WEEK',
+    TY   = 'THIS_YEAR',
+    TOD  = 'TODAY',
+    TOM  ='TOMORROW',
+    YES  ='YESTERDAY'
 }
 
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
@@ -28,6 +84,9 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         let relativeFlattenedPosition: vscode.Position = query.flattenPosition(relativePosition, true);
         let pointRemoved: boolean = false;
         let commaSanitized: boolean = false;
+        let filterToken: {} = {};
+        let filterOperatorDefined = false;
+        let targetOperator: string = null;
 
         if (shouldRemovePoint(query, relativePosition)) {
             query.setLine(relativePosition.line, replaceAt(query.getLine(relativePosition.line), relativePosition.character - 1, ''));
@@ -43,9 +102,16 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             relativeFlattenedPosition = relativeFlattenedPosition.with(relativeFlattenedPosition.line, 
                 relativeFlattenedPosition.character - query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length + 1);
         }
-        if (shouldCompleteFilter(query, relativePosition)) {
+
+        if (shouldCompleteFilter(query, relativePosition, filterToken)) {
             let affectedLine = query.getLine(relativePosition.line)
-            query.setLine(relativePosition.line, splice(affectedLine, relativeFlattenedPosition.character, 0, '=null'));
+             if ((<any>Object).values(ConditionalOperator).includes(filterToken['token'])) {
+                query.setLine(relativePosition.line, splice(affectedLine, relativeFlattenedPosition.character, 0, 'null'));
+                filterOperatorDefined = true;
+                targetOperator = filterToken['token'];
+            } else {
+                query.setLine(relativePosition.line, splice(affectedLine, relativeFlattenedPosition.character, 0, '=null'));
+            }
         }
         if (shouldAddComma(query, relativePosition)) {
             query.setLine(relativePosition.line, replaceAt(query.getLine(relativePosition.line), relativePosition.character, ','));
@@ -69,7 +135,17 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         vscode.window.forceCode.outputChannel.appendLine(listener.targetField);
         vscode.window.forceCode.outputChannel.appendLine(listener.targetFieldCtx.toString());
 
-        if (listener.shouldCompleteField()) {
+        if (filterOperatorDefined && targetOperator && listener.targetField && listener.targetObject) {
+            let fieldInfo = extractFromJson(listener.targetObject, `fields[*name=${listener.targetField }]`);
+            if (fieldInfo && fieldInfo.value && fieldInfo.value.length) {
+                if (fieldInfo.value[0].type === 'date' || fieldInfo.value[0].type === 'datetime') {
+                    completions.push(new vscode.CompletionItem(moment().format(fieldInfo.value[0].type === 'date' ? 'YYYY-MM-DD' : 'YYYY-MM-DDTHH:mm:ss.SSSZ'), vscode.CompletionItemKind.Constant));
+                    (<any>Object).values(DateLiterals).forEach(element => {
+                        completions.push(new vscode.CompletionItem(element, vscode.CompletionItemKind.Constant));
+                    });
+                }
+            }
+        } else if (listener.shouldCompleteField()) {
             let fieldTokens: string[] = listener.targetField.split('.');
             completions.push(...getFieldCompletions(fieldTokens, listener, pointRemoved, commaSanitized));
         } else if (listener.shouldCompleteSObject()) {
@@ -248,7 +324,7 @@ function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): 
     let flattenedPosition = query.flattenPosition(position, true);
 
     let startMatch = /\b(WHERE)\b/i.exec(flattenedQuery);
-    let endMatch = /\b(WITH|GROUP\sBY|ORDER\sBY|LIMIT|OFFSET|FOR|$)\b/i.exec(flattenedQuery);
+    let endMatch = /\b(WITH|GROUP\sBY|ORDER\sBY|LIMIT|OFFSET|FOR)\b|$/i.exec(flattenedQuery);
 
     return startMatch && endMatch && flattenedPosition.character > startMatch.index && 
             flattenedPosition.character - 1 <= endMatch.index;
@@ -269,23 +345,26 @@ function shouldRemoveComma(query: SoqlQuery, position: vscode.Position): boolean
             match && match.length && match[0].toLocaleUpperCase() === 'FROM';
 }
 
-function shouldCompleteFilter(query: SoqlQuery, position: vscode.Position): boolean {
+function shouldCompleteFilter(query: SoqlQuery, position: vscode.Position, token: {}): boolean {
     if (!isCursorInWhereStatement(query, position)) return false;
 
+    token['token'] = extractFilterToken(query, position);
+
+    return token['token'].trim() === token['token'];
+}
+
+function extractFilterToken(query: SoqlQuery, position: vscode.Position) {
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
 
     let startIndex = flattenedQuery.substring(0, flattenedPosition.character).lastIndexOf(' ') + 1;
     let endIndex: number = -1;
     let endMatch = /(\s+|$)/i.exec(flattenedQuery.substring(flattenedPosition.character));
-
+    
     if (endMatch) {
         endIndex = endMatch.index + flattenedPosition.character;
     }
-
-    let maybeField = flattenedQuery.substring(startIndex, endIndex);
-
-    return maybeField.trim() === maybeField;
+    return flattenedQuery.substring(startIndex, endIndex);
 }
 
 function shouldAddComma(query: SoqlQuery, position: vscode.Position): boolean {
@@ -315,7 +394,6 @@ class SoqlTreeListener implements SoqlListener {
     targetFieldCtx: FieldContext = FieldContext.UNKNOWN;
     isInSubquery: boolean = false;
 
-
     constructor(position: vscode.Position) {
         this.pos = position;
     }
@@ -326,7 +404,6 @@ class SoqlTreeListener implements SoqlListener {
     exitEveryRule = () => { };
 
     enterObjectType = (ctx: SoqlParser.ObjectTypeContext) => {
-        //vscode.window.forceCode.outputChannel.appendLine(JSON.stringify(ctx));
         let curCtx: ParserRuleContext = ctx;
         while (curCtx && !(curCtx instanceof SoqlParser.WhereSubqueryContext || 
             curCtx instanceof SoqlParser.SoqlStatementContext)) {
@@ -383,7 +460,14 @@ class SoqlTreeListener implements SoqlListener {
     }
  
     enterFieldItem = (ctx: SoqlParser.FieldItemContext) => {
-        if (this.isInRange(ctx.start, ctx.stop, true)) {
+        let curCtx: ParserRuleContext = ctx;
+        while (curCtx && !(curCtx instanceof SoqlParser.ConditionExpressionContext)) {
+            curCtx = curCtx.parent;
+        }
+
+        if (!curCtx) curCtx = ctx;
+
+        if (this.isInRange(curCtx.start, curCtx.stop, true)) {
             this.targetField = ctx.text;
         }
     }
@@ -402,6 +486,10 @@ class SoqlTreeListener implements SoqlListener {
         }
     }
 
+    enterConditionExpression = (ctx: SoqlParser.ConditionExpressionContext) => {
+        //console.log(JSON.stringify(ctx));
+    }
+
     private isInRange(start: Token, end: Token, oneExtraAtEnd?: boolean): boolean {
         return (this.pos.line > start.line && this.pos.line < end.line) || 
             (this.pos.line == start.line && this.pos.line != end.line && this.pos.character >= start.startIndex) ||
@@ -414,7 +502,7 @@ class SoqlTreeListener implements SoqlListener {
     }
 
     public shouldCompleteSObject(): boolean {
-        return this.targetFieldCtx === FieldContext.FROM;
+        return this.targetFieldCtx === FieldContext.FROM && !this.isInSubquery;
     }
 
     public shouldCompleteChildRelationship(): boolean {
