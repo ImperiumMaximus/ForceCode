@@ -16,7 +16,8 @@ enum FieldContext {
     SELECT,
     WHERE,
     GROUPBY,
-    ORDERBY 
+    ORDERBY,
+    FROM
 }
 
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
@@ -51,8 +52,6 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             commaSanitized = true;
         }
 
-        
-
         // Todo CLEAN the query before parsing: 
         // for instance if I type SELECT Name, |(trigger autocompletion manually) FROM Object__c the parser breaks and cannot detect the target object (Object__c)
         // buf if I'm in this situation: SELECT Name, Cr|(trigger autocompletion) FROM Object__c the parser works
@@ -72,16 +71,29 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
 
         if (listener.shouldCompleteField()) {
             let fieldTokens: string[] = listener.targetField.split('.');
-            completions.push(...getFieldCompletions(fieldTokens, listener.targetFieldCtx, listener.targetObject, pointRemoved, commaSanitized));
+            completions.push(...getFieldCompletions(fieldTokens, listener, pointRemoved, commaSanitized));
+        } else if (listener.shouldCompleteSObject()) {
+            completions.push(...getSObjectCompletions(listener.targetObject));
+        } else if (listener.shouldCompleteChildRelationship()) {
+            completions.push(...getChildRelationshipCompletions(listener.targetObject, listener.targetRelationshipObject));
         }
 
         return Promise.resolve(completions);
     }
 }
 
-function getFieldCompletions(fieldTokens: string[], fieldCtx: FieldContext, startingSObjectName: string, pointRemoved: boolean, commaSanitized: boolean): vscode.CompletionItem[] {
-    let sObjectName: string = startingSObjectName;
+function getFieldCompletions(fieldTokens: string[], listener: SoqlTreeListener, pointRemoved: boolean, commaSanitized: boolean): vscode.CompletionItem[] {
+    let sObjectName: string = listener.targetObject;
     let completions: vscode.CompletionItem[] = [];
+
+    if (listener.isInSubquery && listener.targetRelationshipObject) {
+        let query = `childRelationships[*relationshipName=${listener.targetRelationshipObject}]`;
+        let childRelationship = extractFromJson(sObjectName, query);
+        if (childRelationship && childRelationship.value && childRelationship.value.length) {
+            sObjectName = childRelationship.value[0].childSObject;
+        }
+    }
+    
     if (!commaSanitized) {
         for (var i = 0; i < fieldTokens.length; i++) {
             let targetField: string = fieldTokens[i];
@@ -96,7 +108,7 @@ function getFieldCompletions(fieldTokens: string[], fieldCtx: FieldContext, star
                 query = `fields[*relationshipName=${targetField}]`;
             }
             
-            let results = extractFields(sObjectName, query, options);
+            let results = extractFromJson(sObjectName, query, options);
             
             if (i == fieldTokens.length - 1 && !pointRemoved) {
                 // we are at the last element, provide completions
@@ -109,14 +121,59 @@ function getFieldCompletions(fieldTokens: string[], fieldCtx: FieldContext, star
     } 
     
     if (pointRemoved || commaSanitized) {
-        let results = extractFields(sObjectName, 'fields');
+        let results = extractFromJson(sObjectName, 'fields');
         completions.push(...processFields(results));
     }
 
     return completions;
 }
 
-function extractFields(sObjectName: string, query: string, jsonQueryoptions?: {}): any {
+function getSObjectCompletions(targetObject?: string): vscode.CompletionItem[] {
+    let completions: vscode.CompletionItem[] = [];
+    getSObjectJsonList().forEach(checkIfPropose);
+    getSObjectJsonList(true).forEach(checkIfPropose);
+
+    return completions;
+
+    function checkIfPropose(element: string) {
+        if (!targetObject || element.match(`/^${targetObject}.*/i`)) {
+            completions.push(new vscode.CompletionItem(element, vscode.CompletionItemKind.Class));
+        }
+    }
+}
+
+function getChildRelationshipCompletions(targetObject: string, targetRelationshipObject?: string): vscode.CompletionItem[] {
+    let completions: vscode.CompletionItem[] = [];
+
+    let query = targetRelationshipObject ? `childRelationships[*relationshipName~/^${targetRelationshipObject}.*/i]` : 'childRelationships';
+    let options = targetRelationshipObject ? {allowRegexp: true} : {};
+
+    let childRelationships = extractFromJson(targetObject, query, options);
+
+    if (childRelationships && childRelationships.value) {
+        childRelationships.value.forEach(element => {
+            completions.push(new vscode.CompletionItem(element.relationshipName, vscode.CompletionItemKind.Class));
+        });
+    }
+
+    return completions;
+}
+
+function getSObjectJsonList(listCustom?: boolean): string[] {
+    let targetDir: string = path.join(
+    vscode.workspace.workspaceFolders[0].uri.fsPath,
+    SFDX_DIR,
+    TOOLS_DIR,
+    SOBJECTS_DIR,
+    listCustom ? CUSTOMOBJECTS_DIR : STANDARDOBJECTS_DIR,
+    JSONS_DIR);
+
+    return fs.readdirSync(targetDir).map(f => {
+        return f.substring(0, f.lastIndexOf('.json'));
+    });
+}
+
+function extractFromJson(sObjectName: string, query: string, jsonQueryoptions?: {}): any {
     let options = { data: null };
     Object.assign(options, jsonQueryoptions);
     if (sObjectName !== 'SObject') {
@@ -253,8 +310,10 @@ function splice(str: string, idx: number, rem: number, newStr: string): string {
 class SoqlTreeListener implements SoqlListener {
     pos: vscode.Position;
     targetObject: string = null;
+    targetRelationshipObject: string = null;
     targetField: string = '';
     targetFieldCtx: FieldContext = FieldContext.UNKNOWN;
+    isInSubquery: boolean = false;
 
 
     constructor(position: vscode.Position) {
@@ -278,6 +337,7 @@ class SoqlTreeListener implements SoqlListener {
             this.isInRange(curCtx.start, curCtx.stop) ||
             (curCtx instanceof SoqlParser.SoqlStatementContext && !this.targetObject)) {
             this.targetObject = ctx.text;
+            this.isInSubquery = this.isInSubquery || curCtx instanceof SoqlParser.WhereSubqueryContext;
         }
     }
 
@@ -288,7 +348,7 @@ class SoqlTreeListener implements SoqlListener {
         }
 
         if (curCtx && (curCtx instanceof SoqlParser.SubqueryContext) && this.isInRange(curCtx.start, curCtx.stop)) {
-            this.targetObject = ctx.text;
+            this.targetRelationshipObject = ctx.text;
         }
     }
 
@@ -309,15 +369,36 @@ class SoqlTreeListener implements SoqlListener {
             this.targetFieldCtx = FieldContext.ORDERBY;
         }
     }
+
     enterGroupByStatement = (ctx: SoqlParser.GroupByStatementContext) => {
         if (this.isInRange(ctx.start, ctx.stop, true)) {
             this.targetFieldCtx = FieldContext.GROUPBY;
+        }
+    }
+
+    enterFromStatement = (ctx: SoqlParser.FromStatementContext) => {
+        if (this.isInRange(ctx.start, ctx.stop, true)) {
+            this.targetFieldCtx = FieldContext.FROM;
         }
     }
  
     enterFieldItem = (ctx: SoqlParser.FieldItemContext) => {
         if (this.isInRange(ctx.start, ctx.stop, true)) {
             this.targetField = ctx.text;
+        }
+    }
+
+    enterSelectSubqueryStatement = (ctx: SoqlParser.SelectSubqueryStatementContext) => {
+        if (this.isInRange(ctx.start, ctx.stop, true)) {
+            this.targetFieldCtx = FieldContext.SELECT;
+            this.isInSubquery = true;
+        }
+    }
+
+    enterFromSubqueryStatement = (ctx: SoqlParser.FromSubqueryStatementContext) => {
+        if (this.isInRange(ctx.start, ctx.stop, true)) {
+            this.targetFieldCtx = FieldContext.FROM;
+            this.isInSubquery = true;
         }
     }
 
@@ -329,6 +410,14 @@ class SoqlTreeListener implements SoqlListener {
     }
 
     public shouldCompleteField(): boolean {
-        return !!this.targetObject && !!this.targetFieldCtx;
+        return !!this.targetObject && this.targetFieldCtx !== FieldContext.FROM;
+    }
+
+    public shouldCompleteSObject(): boolean {
+        return this.targetFieldCtx === FieldContext.FROM;
+    }
+
+    public shouldCompleteChildRelationship(): boolean {
+        return !!this.targetObject && this.targetFieldCtx === FieldContext.FROM && this.isInSubquery;
     }
 }
