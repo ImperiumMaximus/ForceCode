@@ -133,8 +133,7 @@
       },
       {
         "command": "ForceCode.soql",
-        "key": "alt+cmd+q",
-        "win": "ctrl+shift+q"
+        "key": "ctrl+shift+q"
       }
     ],
     "configuration": {
