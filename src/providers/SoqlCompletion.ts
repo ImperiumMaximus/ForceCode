@@ -136,7 +136,7 @@ function getSObjectCompletions(targetObject?: string): vscode.CompletionItem[] {
     return completions;
 
     function checkIfPropose(element: string) {
-        if (!targetObject || element.match(`/^${targetObject}.*/i`)) {
+        if (!targetObject || element.match(new RegExp('^' + targetObject + '.*', 'i'))) {
             completions.push(new vscode.CompletionItem(element, vscode.CompletionItemKind.Class));
         }
     }
