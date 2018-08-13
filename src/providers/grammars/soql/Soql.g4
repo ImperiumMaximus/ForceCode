@@ -89,7 +89,11 @@ fieldList
 
 // (SELECT Contact.LastName FROM Account.Contacts)
 subquery
-	:	'(' SELECT fieldList fromSubqueryStatement whereStatement? ')'
+	:	'(' selectSubqueryStatement fromSubqueryStatement whereStatement? ')'
+	;
+
+selectSubqueryStatement
+	:	SELECT fieldList
 	;
 	
 fromSubqueryStatement
