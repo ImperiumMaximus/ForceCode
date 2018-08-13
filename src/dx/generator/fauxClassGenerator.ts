@@ -99,14 +99,6 @@ export class FauxClassGenerator {
       customSObjectsFolderPath,
       JSONS_DIR
     );
-    if (
-      !fs.existsSync(projectPath) ||
-      !fs.existsSync(path.join(projectPath, SFDX_PROJECT_FILE))
-    ) {
-      return this.errorExit(
-        nls.localize('no_generate_if_not_in_project', sobjectsFolderPath)
-      );
-    }
     if(type === SObjectCategory.ALL) {
       this.cleanupSObjectFolders(sobjectsFolderPath);
     } else if(type ===SObjectCategory.CUSTOM) {
