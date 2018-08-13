@@ -101,12 +101,9 @@ export function getQueryUnderCursor(pos: vscode.Position): SoqlQuery {
     let currentLineText: string;
 
     if (startLine > 0) {   
-        do  {
-            currentLineText = vscode.window.activeTextEditor.document.lineAt(--startLine).text;
-        } while (startLine > 0 && !currentLineText.trim().endsWith(';'));
-
-        if (startLine > 0) {
-            startLine++;
+        currentLineText = vscode.window.activeTextEditor.document.lineAt(startLine).text;
+        while (startLine > 0 && !currentLineText.trim().toLocaleUpperCase().startsWith('SELECT')) {
+            currentLineText = vscode.window.activeTextEditor.document.lineAt(startLine--).text;
         }
 
 /*        if (startLine < 0) {
