@@ -188,8 +188,8 @@ function getFieldCompletions(fieldTokens: string[], listener: SoqlTreeListener, 
     if (listener.isInSubquery && listener.targetRelationshipObject) {
         let query = `childRelationships[relationshipName=${listener.targetRelationshipObject}]`;
         let childRelationship = extractFromJson(sObjectName, query);
-        if (childRelationship && childRelationship.value && childRelationship.value.length) {
-            sObjectName = childRelationship.value[0].childSObject;
+        if (childRelationship && childRelationship.value) {
+            sObjectName = childRelationship.value.childSObject;
         }
     }
     
@@ -315,10 +315,9 @@ function processFields(results: any): vscode.CompletionItem[] {
 
 function processRelationship(results: any): string {
     if (results && results.value) {
-        let f = results.value[0];
-        if (f.referenceTo) {
-            if (f.referenceTo.length == 1) {
-                return f.referenceTo[0];
+        if (results.value.referenceTo) {
+            if (results.value.referenceTo.length == 1) {
+                return results.value.referenceTo[0];
             } else {
                 return 'SObject'; // we don't infere the actual type, in this case we provide a couple of fields that are in common to all SObjects
             }
