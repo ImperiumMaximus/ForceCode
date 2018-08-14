@@ -16,8 +16,9 @@ export class SoqlQuery {
         this.queryLines.push(...lines);
     }
 
-    public prettyPrint(joinCharacter?: string): string {
-        return this.queryLines.join(joinCharacter || ' ').replace(';', '').trim();
+    public prettyPrint(toTrim: boolean = true, joinCharacter?: string): string {
+        let flattenedQuery = this.queryLines.join(joinCharacter || ' ').replace(';', '');
+        return toTrim ? flattenedQuery.trim() : flattenedQuery;
     }
 
     public getLine(i: number): string {
