@@ -4,13 +4,14 @@ import { getQueryUnderCursor, SoqlQuery } from '../commands/soql';
 import { ANTLRInputStream, CommonTokenStream, Token, ParserRuleContext } from 'antlr4ts';
 import { ParseTreeWalker } from 'antlr4ts/tree';
 import { SoqlLexer } from './grammars/soql/SoqlLexer';
-import  * as SoqlParser from './grammars/soql/SoqlParser';
+import * as SoqlParser from './grammars/soql/SoqlParser';
 import { SoqlListener } from './grammars/soql/SoqlListener';
 import { SFDX_DIR, TOOLS_DIR, SOBJECTS_DIR, STANDARDOBJECTS_DIR, CUSTOMOBJECTS_DIR, JSONS_DIR } from '../dx/generator/fauxClassGenerator';
 import * as path from 'path';
 import * as fs from 'fs-extra';
 var jsonQuery = require('json-query');
 const moment: any = require('moment');
+var reverse = require('reverse-string');
 
 const enum FieldContext {
     UNKNOWN,
@@ -22,18 +23,18 @@ const enum FieldContext {
 }
 
 enum ConditionalOperator {
-    EQUAL = '=',
-    NEQUAL = '!=',
-    NEQUAL2 = '<>', 
-    LT = '<',
-    LTE = '<=',
-    GT = '>',
-    GTE = '>=',
-    IN = 'IN',
-    NOTIN = 'NOT IN',
+    EQUAL    = '=',
+    NEQUAL   = '!=',
+    NEQUAL2  = '<>', 
+    LT       = '<',
+    LTE      = '<=',
+    GT       = '>',
+    GTE      = '>=',
+    IN       = 'IN',
+    NOTIN    = 'NOT IN',
     INCLUDES = 'INCLUDES',
     EXCLUDES = 'EXCLUDES',
-    LIKE = 'LIKE'
+    LIKE     = 'LIKE'
 }
 
 enum DateLiterals {
@@ -79,15 +80,24 @@ enum DateLiterals {
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Thenable<vscode.CompletionItem[]> {
         var completions: vscode.CompletionItem[] = [];
+
         let query: SoqlQuery = getQueryUnderCursor(position);
         let relativePosition: vscode.Position = position.with(position.line - query.getStartLine(), position.character);
         let relativeFlattenedPosition: vscode.Position = query.flattenPosition(relativePosition, true);
+        
         let pointRemoved: boolean = false;
         let commaSanitized: boolean = false;
+        
         let filterToken: {} = {};
         let filterOperatorDefined = false;
         let targetOperator: string = null;
+        
+        let extraSpaces: {} = {};
 
+        // Input sanitization to allow SOQL Parser to properly build a tree from a (possibly) incomplete query statement
+        if (shouldRemoveExtraSpaces(query, relativePosition, extraSpaces)) {
+            relativePosition = relativePosition.with(relativePosition.line, relativePosition.character - extraSpaces['len']);
+        }
         if (shouldRemovePoint(query, relativePosition)) {
             query.setLine(relativePosition.line, replaceAt(query.getLine(relativePosition.line), relativePosition.character - 1, ''));
             relativePosition = relativePosition.with(relativePosition.line, relativePosition.character - 1);
@@ -118,9 +128,6 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             commaSanitized = true;
         }
 
-        // Todo CLEAN the query before parsing: 
-        // for instance if I type SELECT Name, |(trigger autocompletion manually) FROM Object__c the parser breaks and cannot detect the target object (Object__c)
-        // buf if I'm in this situation: SELECT Name, Cr|(trigger autocompletion) FROM Object__c the parser works
         var chars = new ANTLRInputStream(query.prettyPrint());
         var lexer = new SoqlLexer(chars);
         var tokens = new CommonTokenStream(lexer);
@@ -161,9 +168,25 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
 function getFieldCompletions(fieldTokens: string[], listener: SoqlTreeListener, pointRemoved: boolean, commaSanitized: boolean): vscode.CompletionItem[] {
     let sObjectName: string = listener.targetObject;
     let completions: vscode.CompletionItem[] = [];
+    let additionalQueryFilter: string = '';
+
+    switch (listener.targetFieldCtx) {
+        case FieldContext.WHERE: {
+            additionalQueryFilter = 'filterable = true';
+            break;
+        }
+        case FieldContext.GROUPBY: {
+            additionalQueryFilter = 'groupable = true';
+            break;
+        }
+        case FieldContext.ORDERBY: {
+            additionalQueryFilter = 'sortable = true';
+            break;
+        }
+    }
 
     if (listener.isInSubquery && listener.targetRelationshipObject) {
-        let query = `childRelationships[*relationshipName=${listener.targetRelationshipObject}]`;
+        let query = `childRelationships[relationshipName=${listener.targetRelationshipObject}]`;
         let childRelationship = extractFromJson(sObjectName, query);
         if (childRelationship && childRelationship.value && childRelationship.value.length) {
             sObjectName = childRelationship.value[0].childSObject;
@@ -178,10 +201,13 @@ function getFieldCompletions(fieldTokens: string[], listener: SoqlTreeListener, 
             let options: {} = {};
 
             if (i == fieldTokens.length - 1 && !pointRemoved) {
-                query = `fields[*name~/^${targetField}.*/i]`;
+                if (additionalQueryFilter) {
+                    additionalQueryFilter = ` & ${additionalQueryFilter}]`;
+                }
+                query = `fields[*name~/^${targetField}.*/i${additionalQueryFilter}`;
                 options['allowRegexp'] = true;
             } else {
-                query = `fields[*relationshipName=${targetField}]`;
+                query = `fields[relationshipName=${targetField}]`;
             }
             
             let results = extractFromJson(sObjectName, query, options);
@@ -197,7 +223,10 @@ function getFieldCompletions(fieldTokens: string[], listener: SoqlTreeListener, 
     } 
     
     if (pointRemoved || commaSanitized) {
-        let results = extractFromJson(sObjectName, 'fields');
+        if (additionalQueryFilter) {
+            additionalQueryFilter = `[${additionalQueryFilter}]`;
+        }
+        let results = extractFromJson(sObjectName, `fields${additionalQueryFilter}`);
         completions.push(...processFields(results));
     }
 
@@ -379,6 +408,17 @@ function shouldAddComma(query: SoqlQuery, position: vscode.Position): boolean {
     return match && match.length && match[0].toLocaleUpperCase() !== 'FROM';
 }
 
+function shouldRemoveExtraSpaces(query: SoqlQuery, position: vscode.Position, result: {}): boolean {
+    let flattenedQuery = query.prettyPrint(false);
+    let flattenedPosition = query.flattenPosition(position, true);
+
+    let matches = reverse(flattenedQuery.substring(0, flattenedPosition.character)).match(/(\s+)/);
+
+    result['len'] = matches && matches.length && matches[0].length > 1 ? matches[0].length - 1 : -1;
+
+    return matches && matches.length && matches[0].length > 1;
+}
+
 function replaceAt(str, index, replace): string {
     return str.substring(0, index) + replace + str.substring(index + 1);
 }
@@ -484,10 +524,6 @@ class SoqlTreeListener implements SoqlListener {
             this.targetFieldCtx = FieldContext.FROM;
             this.isInSubquery = true;
         }
-    }
-
-    enterConditionExpression = (ctx: SoqlParser.ConditionExpressionContext) => {
-        //console.log(JSON.stringify(ctx));
     }
 
     private isInRange(start: Token, end: Token, oneExtraAtEnd?: boolean): boolean {
