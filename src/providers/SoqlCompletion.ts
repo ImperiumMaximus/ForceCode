@@ -22,6 +22,12 @@ const enum FieldContext {
     FROM
 }
 
+const enum SubQueryType {
+    UNKNOWN, 
+    CHILDRELATIONSHIP,
+    SEMIJOIN
+}
+
 enum ConditionalOperator {
     EQUAL    = '=',
     NEQUAL   = '!=',
@@ -192,7 +198,7 @@ function getFieldCompletions(fieldTokens: string[], listener: SoqlTreeListener, 
         }
     }
 
-    if (listener.isInSubquery && listener.targetRelationshipObject) {
+    if (listener.subQueryType === SubQueryType.CHILDRELATIONSHIP && listener.targetRelationshipObject) {
         let query = `childRelationships[relationshipName=${listener.targetRelationshipObject}]`;
         let childRelationship = extractFromJson(sObjectName, query);
         if (childRelationship && childRelationship.value) {
@@ -490,7 +496,7 @@ class SoqlTreeListener implements SoqlListener {
     targetRelationshipObject: string = null;
     targetField: string = '';
     targetFieldCtx: FieldContext = FieldContext.UNKNOWN;
-    isInSubquery: boolean = false;
+    subQueryType: SubQueryType = SubQueryType.UNKNOWN;
 
     constructor(position: vscode.Position) {
         this.pos = position;
@@ -512,7 +518,10 @@ class SoqlTreeListener implements SoqlListener {
             this.isInRange(curCtx.start, curCtx.stop) ||
             (curCtx instanceof SoqlParser.SoqlStatementContext && !this.targetObject)) {
             this.targetObject = ctx.text;
-            //this.isInSubquery = this.isInSubquery || curCtx instanceof SoqlParser.WhereSubqueryContext;
+
+            if (curCtx instanceof SoqlParser.WhereSubqueryContext) {
+                this.subQueryType = SubQueryType.SEMIJOIN;
+            }
         }
     }
 
@@ -573,20 +582,21 @@ class SoqlTreeListener implements SoqlListener {
     enterSelectSubqueryStatement = (ctx: SoqlParser.SelectSubqueryStatementContext) => {
         if (this.isInRange(ctx.start, ctx.stop, true)) {
             this.targetFieldCtx = FieldContext.SELECT;
-            this.isInSubquery = true;
+            this.subQueryType = SubQueryType.CHILDRELATIONSHIP;
         }
     }
 
     enterFromSubqueryStatement = (ctx: SoqlParser.FromSubqueryStatementContext) => {
         if (this.isInRange(ctx.start, ctx.stop, true)) {
             this.targetFieldCtx = FieldContext.FROM;
-            this.isInSubquery = true;
+            this.subQueryType = SubQueryType.CHILDRELATIONSHIP;
         }
     }
 
     enterWhereFromSubqueryStatement = (ctx: SoqlParser.WhereFromSubqueryStatementContext) => {
         if (this.isInRange(ctx.start, ctx.stop, true)) {
             this.targetFieldCtx = FieldContext.FROM;
+            this.subQueryType = SubQueryType.SEMIJOIN;
         }
     }
 
@@ -602,10 +612,10 @@ class SoqlTreeListener implements SoqlListener {
     }
 
     public shouldCompleteSObject(): boolean {
-        return this.targetFieldCtx === FieldContext.FROM && !this.isInSubquery;
+        return this.targetFieldCtx === FieldContext.FROM && this.subQueryType !== SubQueryType.CHILDRELATIONSHIP;
     }
 
     public shouldCompleteChildRelationship(): boolean {
-        return !!this.targetObject && this.targetFieldCtx === FieldContext.FROM && this.isInSubquery;
+        return !!this.targetObject && this.targetFieldCtx === FieldContext.FROM && this.subQueryType === SubQueryType.CHILDRELATIONSHIP;
     }
 }
