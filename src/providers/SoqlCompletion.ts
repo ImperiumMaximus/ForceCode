@@ -73,8 +73,8 @@ enum DateLiterals {
     TW   = 'THIS_WEEK',
     TY   = 'THIS_YEAR',
     TOD  = 'TODAY',
-    TOM  ='TOMORROW',
-    YES  ='YESTERDAY'
+    TOM  = 'TOMORROW',
+    YES  = 'YESTERDAY'
 }
 
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
