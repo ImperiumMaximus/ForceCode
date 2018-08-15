@@ -572,6 +572,7 @@ NullLiteral
 // SOQL Date Literal, e.g. 2010-09-20T22:16:30.000Z
 DateLiteral
 	: NonZeroDigit Digit Digit Digit '-'  Digit Digit '-'  Digit Digit 'T'  Digit Digit ':'  Digit Digit ':'  Digit Digit ('.'  Digit Digit?  Digit?)? Letter
+	| NonZeroDigit Digit Digit Digit '-'  Digit Digit '-'  Digit Digit
 	;
 
 // Separators
