@@ -147,7 +147,11 @@ whereSubqueryStatement
 	;
 
 whereSubquery
-	:	'(' SELECT fieldName FROM objectType whereSubqueryStatement? ')'
+	:	'(' SELECT fieldName whereFromSubqueryStatement whereSubqueryStatement? ')'
+	;
+
+whereFromSubqueryStatement
+	: FROM objectType
 	;
 
 conditionExpression

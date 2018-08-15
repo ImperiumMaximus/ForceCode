@@ -82,7 +82,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         var completions: vscode.CompletionItem[] = [];
 
         let query: SoqlQuery = getQueryUnderCursor(position);
-        let relativePosition: vscode.Position = position.with(position.line - query.getStartLine(), position.character);
+        let relativePosition: vscode.Position = position.translate(-query.getStartLine());
         let relativeFlattenedPosition: vscode.Position = query.flattenPosition(relativePosition, true);
         
         let pointRemoved: boolean = false;
@@ -93,15 +93,22 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         let targetOperator: string = null;
         
         let extraSpaces: {} = {};
+        let parBalance: {} = {};
 
         // Input sanitization to allow SOQL Parser to properly build a tree from a (possibly) incomplete query statement
+        parBalance = parenthesesBalance(query.prettyPrint());
+        if (parBalance['balance'] > 0) {
+            let relEndLineIndex = query.getEndLine() - query.getStartLine();
+            let lastLine = query.getLine(relEndLineIndex);
+            query.setLine(relEndLineIndex, replaceAt(lastLine, lastLine.lastIndexOf(';'), ')'.repeat(parBalance['balance']) + ';')); 
+        }
         if (shouldRemoveExtraSpaces(query, relativePosition, extraSpaces)) {
-            relativePosition = relativePosition.with(relativePosition.line, relativePosition.character - extraSpaces['len']);
+            relativePosition = relativePosition.translate(0, -(extraSpaces['len']));
         }
         if (shouldRemovePoint(query, relativePosition)) {
             query.setLine(relativePosition.line, replaceAt(query.getLine(relativePosition.line), relativePosition.character - 1, ''));
-            relativePosition = relativePosition.with(relativePosition.line, relativePosition.character - 1);
-            relativeFlattenedPosition = relativeFlattenedPosition.with(relativeFlattenedPosition.line, relativeFlattenedPosition.character - 1)
+            relativePosition = relativePosition.translate(0, -1);
+            relativeFlattenedPosition = relativeFlattenedPosition.translate(0, -1);
             pointRemoved = true;
         }
         if (shouldRemoveComma(query, relativePosition)) {
@@ -109,8 +116,8 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             query.setLine(relativePosition.line, replaceAt(affectedLine, 
                     affectedLine.substring(0, relativePosition.character).lastIndexOf(','), ' '));
             commaSanitized = true;
-            relativeFlattenedPosition = relativeFlattenedPosition.with(relativeFlattenedPosition.line, 
-                relativeFlattenedPosition.character - query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length + 1);
+            relativeFlattenedPosition = relativeFlattenedPosition.translate(0, 
+                -(query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length) + 1);
         }
 
         if (shouldCompleteFilter(query, relativePosition, filterToken)) {
@@ -278,9 +285,9 @@ function getSObjectJsonList(listCustom?: boolean): string[] {
     });
 }
 
-function extractFromJson(sObjectName: string, query: string, jsonQueryoptions?: {}): any {
+function extractFromJson(sObjectName: string, query: string, jsonQueryOptions?: {}): any {
     let options = { data: null };
-    Object.assign(options, jsonQueryoptions);
+    Object.assign(options, jsonQueryOptions);
     if (sObjectName !== 'SObject') {
         let targetJson = path.join(
             vscode.workspace.workspaceFolders[0].uri.fsPath,
@@ -335,10 +342,15 @@ function shouldRemovePoint(query: SoqlQuery, position: vscode.Position): boolean
     return position.character && query.getLine(position.line).substring(position.character - 1, position.character) == '.';
 }
 
-// TODO: handle subqueries
 function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position): boolean {
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
+
+    if (isInSubquery(query, position)) {
+        let boundaries = computeSubQueryBoundaries(query, position);
+        flattenedQuery = flattenedQuery.substring(boundaries['startIndex'], boundaries['endIndex'] + 1);
+        flattenedPosition = flattenedPosition.translate(0, -boundaries['startIndex']);
+    }
 
     let startMatch = /\b(SELECT)\b/i.exec(flattenedQuery);
     let endMatch = /\b(FROM)\b/i.exec(flattenedQuery);
@@ -351,6 +363,12 @@ function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): 
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
 
+    if (isInSubquery(query, position)) {
+        let boundaries = computeSubQueryBoundaries(query, position);
+        flattenedQuery = flattenedQuery.substring(boundaries['startIndex'], boundaries['endIndex'] + 1);
+        flattenedPosition = flattenedPosition.translate(0, -boundaries['startIndex']);
+    }
+    
     let startMatch = /\b(WHERE)\b/i.exec(flattenedQuery);
     let endMatch = /\b(WITH|GROUP\sBY|ORDER\sBY|LIMIT|OFFSET|FOR)\b|$/i.exec(flattenedQuery);
 
@@ -425,6 +443,47 @@ function replaceAt(str, index, replace): string {
 function splice(str: string, idx: number, rem: number, newStr: string): string {
     return str.slice(0, idx) + newStr + str.slice(idx + Math.abs(rem));
 }
+
+function parenthesesBalance(str: string, breakOnBalance?: boolean, startIndex?: number, endIndex?: number): any {
+    let balance: number = 0;
+    let curIndex = startIndex ? startIndex : 0;
+
+    let eIdx = endIndex ? endIndex : str.length;
+    do {
+        if (str.charAt(curIndex) == '(') { balance++; }
+        else if (str.charAt(curIndex) == ')') { balance--; }
+        curIndex++;
+    } while ((!breakOnBalance || balance) && curIndex < eIdx);
+    return { balance: balance, endIndex: curIndex - 1 };
+}
+
+function computeSubQueryBoundaries(query: SoqlQuery, position: vscode.Position): any {
+    let flattenedQuery = query.prettyPrint(false);
+    let flattenedPosition = query.flattenPosition(position, true);
+
+    let querySubStr = flattenedQuery.substring(0, flattenedPosition.character);
+    let matches = /TCELES\(/ig.exec(reverse(querySubStr));
+
+    let startMatch = matches && matches.index ? querySubStr.length - matches.index - 7 : 0;
+
+    if (!startMatch) {
+        return null;
+    }
+
+    let endMatch = parenthesesBalance(flattenedQuery.substring(startMatch), true);
+    if (endMatch['balance']) {
+        return null;
+    }
+
+    return { startIndex: startMatch, endIndex: startMatch + endMatch['endIndex'] };
+}
+
+function isInSubquery(query: SoqlQuery, position: vscode.Position) {
+    let boundaries = computeSubQueryBoundaries(query, position);
+    let flattenedPosition = query.flattenPosition(position, true);
+
+    return boundaries && flattenedPosition.character >= boundaries['startIndex'] && flattenedPosition.character <= boundaries['endIndex'];
+}
 class SoqlTreeListener implements SoqlListener {
     pos: vscode.Position;
     targetObject: string = null;
@@ -453,7 +512,7 @@ class SoqlTreeListener implements SoqlListener {
             this.isInRange(curCtx.start, curCtx.stop) ||
             (curCtx instanceof SoqlParser.SoqlStatementContext && !this.targetObject)) {
             this.targetObject = ctx.text;
-            this.isInSubquery = this.isInSubquery || curCtx instanceof SoqlParser.WhereSubqueryContext;
+            //this.isInSubquery = this.isInSubquery || curCtx instanceof SoqlParser.WhereSubqueryContext;
         }
     }
 
@@ -525,6 +584,12 @@ class SoqlTreeListener implements SoqlListener {
         }
     }
 
+    enterWhereFromSubqueryStatement = (ctx: SoqlParser.WhereFromSubqueryStatementContext) => {
+        if (this.isInRange(ctx.start, ctx.stop, true)) {
+            this.targetFieldCtx = FieldContext.FROM;
+        }
+    }
+
     private isInRange(start: Token, end: Token, oneExtraAtEnd?: boolean): boolean {
         return (this.pos.line > start.line && this.pos.line < end.line) || 
             (this.pos.line == start.line && this.pos.line != end.line && this.pos.character >= start.startIndex) ||
@@ -533,7 +598,7 @@ class SoqlTreeListener implements SoqlListener {
     }
 
     public shouldCompleteField(): boolean {
-        return !!this.targetObject && this.targetFieldCtx !== FieldContext.FROM;
+        return !!this.targetObject && this.targetFieldCtx && this.targetFieldCtx !== FieldContext.FROM;
     }
 
     public shouldCompleteSObject(): boolean {
