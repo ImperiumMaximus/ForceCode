@@ -156,18 +156,9 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         vscode.window.forceCode.outputChannel.appendLine(listener.targetFieldCtx.toString());
 
         if (filterOperatorDefined && targetOperator && listener.targetField && listener.targetObject) {
-            let fieldInfo = extractFromJson(listener.targetObject, `fields[*name=${listener.targetField }]`);
-            if (fieldInfo && fieldInfo.value && fieldInfo.value.length) {
-                if (fieldInfo.value[0].type === 'date' || fieldInfo.value[0].type === 'datetime') {
-                    completions.push(new vscode.CompletionItem(moment().format(fieldInfo.value[0].type === 'date' ? 'YYYY-MM-DD' : 'YYYY-MM-DDTHH:mm:ss.SSSZ'), vscode.CompletionItemKind.Constant));
-                    (<any>Object).values(DateLiterals).forEach(element => {
-                        completions.push(new vscode.CompletionItem(element, vscode.CompletionItemKind.Constant));
-                    });
-                }
-            }
+            completions.push(...getFilterCompletions(listener));
         } else if (listener.shouldCompleteField()) {
-            let fieldTokens: string[] = listener.targetField.split('.');
-            completions.push(...getFieldCompletions(fieldTokens, listener, pointRemoved, commaSanitized));
+            completions.push(...getFieldCompletions(listener, pointRemoved, commaSanitized));
         } else if (listener.shouldCompleteSObject()) {
             completions.push(...getSObjectCompletions(listener.targetObject));
         } else if (listener.shouldCompleteChildRelationship()) {
@@ -178,7 +169,22 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
     }
 }
 
-function getFieldCompletions(fieldTokens: string[], listener: SoqlTreeListener, pointRemoved: boolean, commaSanitized: boolean): vscode.CompletionItem[] {
+function getFilterCompletions(listener: SoqlTreeListener): vscode.CompletionItem[] {
+    let completions: vscode.CompletionItem[] = [];
+    let fieldInfo = extractFromJson(listener.targetObject, `fields[name=${listener.targetField}]`);
+    if (fieldInfo && fieldInfo.value) {
+        if (fieldInfo.value.type === 'date' || fieldInfo.value.type === 'datetime') {
+            completions.push(new vscode.CompletionItem(moment().format(fieldInfo.value.type === 'date' ? 'YYYY-MM-DD' : 'YYYY-MM-DDTHH:mm:ss.SSSZ'), vscode.CompletionItemKind.Constant));
+            (<any>Object).values(DateLiterals).forEach(element => {
+                completions.push(new vscode.CompletionItem(element, vscode.CompletionItemKind.Constant));
+            });
+        }
+    }
+    return completions;
+}
+
+function getFieldCompletions(listener: SoqlTreeListener, pointRemoved: boolean, commaSanitized: boolean): vscode.CompletionItem[] {
+    let fieldTokens: string[] = listener.targetField.split('.');
     let sObjectName: string = listener.targetObject;
     let completions: vscode.CompletionItem[] = [];
     let additionalQueryFilter: string = '';
