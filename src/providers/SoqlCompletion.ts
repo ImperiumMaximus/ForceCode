@@ -141,6 +141,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             commaSanitized = true;
         }
         if (shouldAddFakeField(query, relativePosition)) {
+            // TODO: add the fake field in every place when applicable, disregarding cursor position, in order to make the parser happier
             query.setLine(relativePosition.line, splice(query.getLine(relativePosition.line), relativePosition.character, 0, 'A'));
             isFakeField = true;
         }
@@ -425,7 +426,8 @@ function shouldCompleteFilter(query: SoqlQuery, position: vscode.Position, token
 function extractFilterToken(query: SoqlQuery, position: vscode.Position) {
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
-
+    
+    // TODO: this should be changed, for instance what happens if there are no spaces between a filterable field the operator?
     let startIndex = flattenedQuery.substring(0, flattenedPosition.character).lastIndexOf(' ') + 1;
     let endIndex: number = -1;
     let endMatch = /(\s+|$)/i.exec(flattenedQuery.substring(flattenedPosition.character));
