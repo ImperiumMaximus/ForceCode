@@ -93,6 +93,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         
         let pointRemoved: boolean = false;
         let commaSanitized: boolean = false;
+        let isFakeField: boolean = false;
         
         let filterToken: {} = {};
         let filterOperatorDefined = false;
@@ -125,7 +126,6 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             relativeFlattenedPosition = relativeFlattenedPosition.translate(0, 
                 -(query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length) + 1);
         }
-
         if (shouldCompleteFilter(query, relativePosition, filterToken)) {
             let affectedLine = query.getLine(relativePosition.line)
              if ((<any>Object).values(ConditionalOperator).includes(filterToken['token'])) {
@@ -139,6 +139,10 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         if (shouldAddComma(query, relativePosition)) {
             query.setLine(relativePosition.line, replaceAt(query.getLine(relativePosition.line), relativePosition.character, ','));
             commaSanitized = true;
+        }
+        if (shouldAddFakeField(query, relativePosition)) {
+            query.setLine(relativePosition.line, splice(query.getLine(relativePosition.line), relativePosition.character, 0, 'A'));
+            isFakeField = true;
         }
 
         var chars = new ANTLRInputStream(query.prettyPrint());
@@ -158,7 +162,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         if (filterOperatorDefined && targetOperator && listener.targetField && listener.targetObject) {
             completions.push(...getFilterCompletions(listener));
         } else if (listener.shouldCompleteField()) {
-            completions.push(...getFieldCompletions(listener, pointRemoved, commaSanitized));
+            completions.push(...getFieldCompletions(listener, pointRemoved, commaSanitized, isFakeField));
         } else if (listener.shouldCompleteSObject()) {
             completions.push(...getSObjectCompletions(listener.targetObject));
         } else if (listener.shouldCompleteChildRelationship()) {
@@ -183,7 +187,7 @@ function getFilterCompletions(listener: SoqlTreeListener): vscode.CompletionItem
     return completions;
 }
 
-function getFieldCompletions(listener: SoqlTreeListener, pointRemoved: boolean, commaSanitized: boolean): vscode.CompletionItem[] {
+function getFieldCompletions(listener: SoqlTreeListener, pointRemoved: boolean, commaSanitized: boolean, isFakeField: boolean): vscode.CompletionItem[] {
     let fieldTokens: string[] = listener.targetField.split('.');
     let sObjectName: string = listener.targetObject;
     let completions: vscode.CompletionItem[] = [];
@@ -212,7 +216,7 @@ function getFieldCompletions(listener: SoqlTreeListener, pointRemoved: boolean, 
         }
     }
     
-    if (!commaSanitized) {
+    if (!commaSanitized && !isFakeField) {
         for (var i = 0; i < fieldTokens.length; i++) {
             let targetField: string = fieldTokens[i];
 
@@ -241,7 +245,7 @@ function getFieldCompletions(listener: SoqlTreeListener, pointRemoved: boolean, 
         }
     } 
     
-    if (pointRemoved || commaSanitized) {
+    if (pointRemoved || commaSanitized || isFakeField) {
         if (additionalQueryFilter) {
             additionalQueryFilter = `[${additionalQueryFilter}]`;
         }
@@ -354,7 +358,12 @@ function shouldRemovePoint(query: SoqlQuery, position: vscode.Position): boolean
     return position.character && query.getLine(position.line).substring(position.character - 1, position.character) == '.';
 }
 
-function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position): boolean {
+function shouldAddFakeField(query: SoqlQuery, position: vscode.Position): boolean {
+    let res = isCursorInSelectStatement(query, position);
+    return res['result'] && res['onlySpacesBeetween'];
+}
+
+function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position): any {
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
 
@@ -367,8 +376,10 @@ function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position):
     let startMatch = /\b(SELECT)\b/i.exec(flattenedQuery);
     let endMatch = /\b(FROM)\b/i.exec(flattenedQuery);
 
-    return startMatch && endMatch && flattenedPosition.character > startMatch.index && 
-            flattenedPosition.character - 1 <= endMatch.index;
+    let res = {result: startMatch && endMatch && flattenedPosition.character > startMatch.index && 
+        flattenedPosition.character - 1 <= endMatch.index, onlySpacesBeetween: !flattenedQuery.substring(startMatch.index + 6, endMatch.index).trim()};
+
+    return res;
 }
 
 function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): boolean {
@@ -389,7 +400,7 @@ function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): 
 }
 
 function shouldRemoveComma(query: SoqlQuery, position: vscode.Position): boolean {
-    if (!isCursorInSelectStatement(query, position)) return false;
+    if (!isCursorInSelectStatement(query, position)['result']) return false;
 
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
@@ -426,7 +437,7 @@ function extractFilterToken(query: SoqlQuery, position: vscode.Position) {
 }
 
 function shouldAddComma(query: SoqlQuery, position: vscode.Position): boolean {
-    if (!isCursorInSelectStatement(query, position)) return false;
+    if (!isCursorInSelectStatement(query, position)['result']) return false;
 
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
