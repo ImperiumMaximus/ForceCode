@@ -351,7 +351,7 @@ function processRelationship(results: any): string {
 }
 
 function isCustom(sObjectName: string): boolean {
-    return sObjectName.endsWith('__c') || sObjectName.endsWith('__mdt') || sObjectName.endsWith('__e') || sObjectName.endsWith('__x');
+    return sObjectName.endsWith('__c') || sObjectName.endsWith('__mdt') || sObjectName.endsWith('__e') || sObjectName.endsWith('__x') || sObjectName.endsWith('__b');
 }
 
 function shouldRemovePoint(query: SoqlQuery, position: vscode.Position): boolean {
