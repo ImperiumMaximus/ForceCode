@@ -29,15 +29,15 @@ const enum SubQueryType {
 }
 
 enum ConditionalOperator {
-    EQUAL    = '=',
     NEQUAL   = '!=',
     NEQUAL2  = '<>', 
     LT       = '<',
     LTE      = '<=',
     GT       = '>',
     GTE      = '>=',
-    IN       = 'IN',
+    EQUAL    = '=',
     NOTIN    = 'NOT IN',
+    IN       = 'IN',
     INCLUDES = 'INCLUDES',
     EXCLUDES = 'EXCLUDES',
     LIKE     = 'LIKE'
@@ -83,6 +83,7 @@ enum DateLiterals {
     YES  = 'YESTERDAY'
 }
 
+//TODO: check if it is possible to not compute flattenedQuery and flattenedPosition everytime in the query sanitization phase
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Thenable<vscode.CompletionItem[]> {
         var completions: vscode.CompletionItem[] = [];
@@ -377,7 +378,7 @@ function maybeAddFakeFields(query: SoqlQuery, position: vscode.Position) {
     return { relativePosition: maybeNewPosition, isFakeField: shouldIgnoreFieldInCompletion};
 }
 
-function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position): any {
+function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position): boolean {
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
 
@@ -387,13 +388,12 @@ function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position):
         flattenedPosition = flattenedPosition.translate(0, -boundaries['startIndex']);
     }
 
+    //FIXME: this doesn't quite work when there are sub-childrelationship queries in between
     let startMatch = /\b(SELECT)\b/i.exec(flattenedQuery);
     let endMatch = /\b(FROM)\b/i.exec(flattenedQuery);
 
-    let res = {result: startMatch && endMatch && flattenedPosition.character > startMatch.index && 
-        flattenedPosition.character - 1 <= endMatch.index, onlySpacesBeetween: !flattenedQuery.substring(startMatch.index + 6, endMatch.index).trim()};
-
-    return res;
+    return startMatch && endMatch && flattenedPosition.character > startMatch.index && 
+        flattenedPosition.character - 1 <= endMatch.index;
 }
 
 function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): boolean {
@@ -414,7 +414,7 @@ function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): 
 }
 
 function maybeRemoveComma(query: SoqlQuery, position: vscode.Position): boolean {
-    if (!isCursorInSelectStatement(query, position)['result']) return false;
+    if (!isCursorInSelectStatement(query, position)) return false;
 
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
@@ -449,19 +449,32 @@ function extractFilterToken(query: SoqlQuery, position: vscode.Position) {
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
     
-    // TODO: this should be changed, for instance what happens if there are no spaces between a filterable field and the operator?
-    let startIndex = flattenedQuery.substring(0, flattenedPosition.character).lastIndexOf(' ') + 1;
-    let endIndex: number = -1;
-    let endMatch = /(\s+|$)/i.exec(flattenedQuery.substring(flattenedPosition.character));
-    
-    if (endMatch) {
-        endIndex = endMatch.index + flattenedPosition.character;
+    let indexes = getAllIndexesOfMatches(flattenedQuery.substring(0, flattenedPosition.character), 
+        /[a-z]\w*((\s*(=|!=|<>|<=?|>=?))|(\s+(INCLUDES|EXCLUDES|(NOT\s)?IN|LIKE)))?/gi);
+
+    if (!indexes || !indexes.length) {
+        return '';
     }
-    return flattenedQuery.substring(startIndex, endIndex);
+
+    let match = indexes[indexes.length - 1];
+    let startIndex = -1;
+    let endsWithOperator = false;
+    (<any>Object).values(ConditionalOperator).forEach(element => {
+        if (match[2].endsWith(element)) {
+            startIndex = match[1] - element.length;
+            endsWithOperator = true;
+        }    
+    });
+
+    if (!endsWithOperator) {
+        startIndex = match[0];
+    }
+
+    return flattenedQuery.substring(startIndex, match[1]);
 }
 
 function shouldAddComma(query: SoqlQuery, position: vscode.Position): boolean {
-    if (!isCursorInSelectStatement(query, position)['result']) return false;
+    if (!isCursorInSelectStatement(query, position)) return false;
 
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
@@ -511,6 +524,7 @@ function computeSubQueryBoundaries(query: SoqlQuery, position: vscode.Position):
     let flattenedPosition = query.flattenPosition(position, true);
 
     let querySubStr = flattenedQuery.substring(0, flattenedPosition.character);
+    //TODO: this should be improved
     let matches = /TCELES\(/ig.exec(reverse(querySubStr));
 
     let startMatch = matches && matches.index ? querySubStr.length - matches.index - 7 : 0;
@@ -540,7 +554,7 @@ function getAllIndexesOfMatches(str: string, pattern: RegExp): any[] {
 
     let match, indexes = [];
     while (match = pattern.exec(str))
-        indexes.push([match.index, match.index + match[0].length]);
+        indexes.push([match.index, match.index + match[0].length, match[0]]);
 
     return indexes;
 }

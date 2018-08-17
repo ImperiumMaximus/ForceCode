@@ -53,11 +53,15 @@ export class SoqlQuery {
     }
 
     public flattenPosition(pos: vscode.Position, relative?: boolean): vscode.Position {
+        if (this.queryLines.length == 1) {
+            return pos;
+        }
+
         let line = relative ? pos.line - 1 : pos.line - this.startLine;
         let character = pos.character;
 
         for (var i = 0; i < line; i++) {
-            character += this.queryLines[i].length;
+            character += this.queryLines[i].length + (this.queryLines[i].length ? 1 : 0);
         }
 
         return new vscode.Position(1, character);
