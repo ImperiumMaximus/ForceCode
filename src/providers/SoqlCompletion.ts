@@ -99,7 +99,6 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         let filterOperatorDefined = false;
         let targetOperator: string = null;
         
-        let extraSpaces: {} = {};
         let parBalance: {} = {};
 
         // Input sanitization to allow SOQL Parser to properly build a tree from a (possibly) incomplete query statement
@@ -108,23 +107,22 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             let lastLine = query.getLastLine();
             query.setLastLine(replaceAt(lastLine, lastLine.lastIndexOf(';'), ')'.repeat(parBalance['balance']) + ';')); 
         }
-        if (shouldRemoveExtraSpaces(query, relativePosition, extraSpaces)) {
-            relativePosition = relativePosition.translate(0, -(extraSpaces['len']));
-        }
+
+        relativePosition = maybeRemoveExtraSpaces(query, relativePosition);
+             
         if (shouldRemovePoint(query, relativePosition)) {
             query.setLine(relativePosition, replaceAt(query.getLine(relativePosition), relativePosition.character - 1, ''));
             relativePosition = relativePosition.translate(0, -1);
             relativeFlattenedPosition = relativeFlattenedPosition.translate(0, -1);
             pointRemoved = true;
         }
-        if (shouldRemoveComma(query, relativePosition)) {
-            let affectedLine = query.getLine(relativePosition)
-            query.setLine(relativePosition, replaceAt(affectedLine, 
-                    affectedLine.substring(0, relativePosition.character).lastIndexOf(','), ' '));
+
+        if (maybeRemoveComma(query, relativePosition)) {
             commaSanitized = true;
             relativeFlattenedPosition = relativeFlattenedPosition.translate(0, 
                 -(query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length) + 1);
         }
+
         if (shouldCompleteFilter(query, relativePosition, filterToken)) {
             let affectedLine = query.getLine(relativePosition)
              if ((<any>Object).values(ConditionalOperator).includes(filterToken['token'])) {
@@ -135,6 +133,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
                 query.setLine(relativePosition, splice(affectedLine, relativeFlattenedPosition.character, 0, '=null'));
             }
         }
+
         if (shouldAddComma(query, relativePosition)) {
             query.setLine(relativePosition, replaceAt(query.getLine(relativePosition), relativePosition.character, ','));
             commaSanitized = true;
@@ -414,7 +413,7 @@ function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): 
             flattenedPosition.character - 1 <= endMatch.index;
 }
 
-function shouldRemoveComma(query: SoqlQuery, position: vscode.Position): boolean {
+function maybeRemoveComma(query: SoqlQuery, position: vscode.Position): boolean {
     if (!isCursorInSelectStatement(query, position)['result']) return false;
 
     let flattenedQuery = query.prettyPrint();
@@ -423,10 +422,19 @@ function shouldRemoveComma(query: SoqlQuery, position: vscode.Position): boolean
     let lastCommaPosition: number = flattenedQuery.substring(0, flattenedPosition.character).lastIndexOf(',') + 1;
 
     let querySubstrToEnd = flattenedQuery.substring(flattenedPosition.character);
-    var match = querySubstrToEnd.match(/([a-z]\w+\.?)/i);
+    var match = querySubstrToEnd.match(/([\(a-z]\w+\.?)/i);
 
-    return !flattenedQuery.substring(lastCommaPosition, flattenedPosition.character).trim().length && 
-            match && match.length && match[0].toLocaleUpperCase() === 'FROM';
+    let result = !flattenedQuery.substring(lastCommaPosition, flattenedPosition.character).trim().length && 
+                    match && match.length && (match[0].toLocaleUpperCase() === 'FROM' || match[0].startsWith('('));
+
+    if (result) {
+        let expandedLastCommaPosition = query.expandPositiion(lastCommaPosition);
+        let affectedLine = query.getLine(expandedLastCommaPosition);
+
+        query.setLine(expandedLastCommaPosition, replaceAt(affectedLine, expandedLastCommaPosition.character - 1, ' '));        
+    }
+
+    return result;
 }
 
 function shouldCompleteFilter(query: SoqlQuery, position: vscode.Position, token: {}): boolean {
@@ -441,7 +449,7 @@ function extractFilterToken(query: SoqlQuery, position: vscode.Position) {
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
     
-    // TODO: this should be changed, for instance what happens if there are no spaces between a filterable field the operator?
+    // TODO: this should be changed, for instance what happens if there are no spaces between a filterable field and the operator?
     let startIndex = flattenedQuery.substring(0, flattenedPosition.character).lastIndexOf(' ') + 1;
     let endIndex: number = -1;
     let endMatch = /(\s+|$)/i.exec(flattenedQuery.substring(flattenedPosition.character));
@@ -464,15 +472,17 @@ function shouldAddComma(query: SoqlQuery, position: vscode.Position): boolean {
     return match && match.length && match[0].toLocaleUpperCase() !== 'FROM';
 }
 
-function shouldRemoveExtraSpaces(query: SoqlQuery, position: vscode.Position, result: {}): boolean {
+function maybeRemoveExtraSpaces(query: SoqlQuery, position: vscode.Position): vscode.Position {
     let flattenedQuery = query.prettyPrint(false);
     let flattenedPosition = query.flattenPosition(position, true);
 
     let matches = reverse(flattenedQuery.substring(0, flattenedPosition.character)).match(/(\s+)/);
 
-    result['len'] = matches && matches.length && matches[0].length > 1 ? matches[0].length - 1 : -1;
+    if (matches && matches.length && matches[0].length > 1) {
+        position = position.translate(0, -matches[0].length + 1);
+    }
 
-    return matches && matches.length && matches[0].length > 1;
+    return position;
 }
 
 function replaceAt(str, index, replace): string {
