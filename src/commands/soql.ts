@@ -21,17 +21,27 @@ export class SoqlQuery {
         return toTrim ? flattenedQuery.trim() : flattenedQuery;
     }
 
-    public getLine(i: number): string {
+    public getLine(pos: vscode.Position): string {
+        let i = pos.line - 1;
         if (i >= 0 && i < this.queryLines.length) {
             return this.queryLines[i];
         }
         return null
     }
 
-    public setLine(i: number, line: string): void {
+    public getLastLine(): string {
+        return this.queryLines[this.queryLines.length - 1];
+    }
+
+    public setLine(pos: vscode.Position, line: string): void {
+        let i = pos.line - 1; 
         if (i >= 0 && i < this.queryLines.length) {
             this.queryLines[i] = line;
         }
+    }
+
+    public setLastLine(line: string): void {
+        this.queryLines[this.queryLines.length - 1] = line;
     }
 
     public getStartLine(): number {
@@ -43,7 +53,7 @@ export class SoqlQuery {
     }
 
     public flattenPosition(pos: vscode.Position, relative?: boolean): vscode.Position {
-        let line = relative ? pos.line : pos.line - this.startLine;
+        let line = relative ? pos.line - 1 : pos.line - this.startLine;
         let character = pos.character;
 
         for (var i = 0; i < line; i++) {
@@ -51,6 +61,22 @@ export class SoqlQuery {
         }
 
         return new vscode.Position(1, character);
+    }
+
+    public expandPositiion(idx: number): vscode.Position {
+        if (this.queryLines.length == 1) {
+            return new vscode.Position(1, idx);
+        }
+
+        let line = 0;
+        let col = idx;
+
+        while (line < this.queryLines.length && 
+                col > this.queryLines[line].length) {
+            col -= this.queryLines[line].length ? this.queryLines[line++].length + 1 : this.queryLines[line++].length;
+        }
+
+        return new vscode.Position(line + 1, col);
     }
 }
 
