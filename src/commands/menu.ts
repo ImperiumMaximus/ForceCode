@@ -59,7 +59,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
                 case model.getLogs.description: return commands.getLog(context);
                 case model.openFile.description: return commands.open(context);
                 case model.resourceBundle.description: return commands.staticResource(context);
-                case model.retrievePackage.description: return commands.retrieve(vscode.window.activeTextEditor.document, context);
+                case model.retrievePackage.description: return commands.retrieve(context, vscode.window.activeTextEditor ? vscode.window.activeTextEditor.document : null);
                 case model.soql.description: return commands.soql(context);
                 case model.toql.description: return commands.toql(context);
                 case model.deployPackage.description: return commands.deploy(context);
