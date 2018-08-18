@@ -83,6 +83,8 @@ enum DateLiterals {
     YES  = 'YESTERDAY'
 }
 
+// TODO: manage aliases
+// NICE TO HAVE: highlight offending piece of query on error
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Thenable<vscode.CompletionItem[]> {
         var completions: vscode.CompletionItem[] = [];
@@ -147,6 +149,10 @@ function getFilterCompletions(listener: SoqlTreeListener): vscode.CompletionItem
             completions.push(new vscode.CompletionItem(moment().format(fieldInfo.value.type === 'date' ? 'YYYY-MM-DD' : 'YYYY-MM-DDTHH:mm:ss.SSSZ'), vscode.CompletionItemKind.Constant));
             (<any>Object).values(DateLiterals).forEach(element => {
                 completions.push(new vscode.CompletionItem(element, vscode.CompletionItemKind.Constant));
+            });
+        } else if (fieldInfo.value.type === 'picklist') {
+            fieldInfo.value.picklistValues.forEach(element => {
+                completions.push(new vscode.CompletionItem('\'' + element.value + '\'', vscode.CompletionItemKind.Constant));
             });
         }
     }
@@ -292,12 +298,20 @@ function processFields(results: any): vscode.CompletionItem[] {
     let completions: vscode.CompletionItem[] = [];
     if (results && results.value) {
         results.value.forEach(f => {
-            completions.push(new vscode.CompletionItem(f.name, vscode.CompletionItemKind.Field));
+            completions.push(constructFieldCompletionItem(f, vscode.CompletionItemKind.Field));
             if (f.type === 'reference') {
-                completions.push(new vscode.CompletionItem(f.relationshipName, vscode.CompletionItemKind.Module));
+                completions.push(constructFieldCompletionItem(f, vscode.CompletionItemKind.Module, 'relationshipName'));
             }
         });
     } 
+
+    function constructFieldCompletionItem(f: any, kind: vscode.CompletionItemKind, labelField?: string) : vscode.CompletionItem {
+        let c = new vscode.CompletionItem(labelField ? f[labelField] : f.name, kind);
+        c.detail = f.type;
+        c.documentation = f.label;
+
+        return c;
+    }
 
     return completions;
 }
@@ -570,9 +584,6 @@ function computeSubQueriesBoundaries(query: SoqlQuery, position: vscode.Position
 }
 
 function subQueryIndex(boundaries: any[], position: vscode.Position): number {
-    /*let boundaries = computeSubQueryBoundaries(query, position);
-    let flattenedPosition = query.flattenPosition(position, true);*/
-
     let res: number = -1;
 
     for (let i: number = 0; i < boundaries.length && res < 0; i++) {
