@@ -118,7 +118,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         parser.buildParseTree = true;
 
         var tree = parser.soqlCodeUnit();
-        var listener = new SoqlTreeListener(query.flattenPosition(relativePosition.translate(0, -1), true));
+        var listener = new SoqlTreeListener(query.flattenPosition(relativePosition, true).translate(0, -1));
         ParseTreeWalker.DEFAULT.walk(listener, tree);
 
         vscode.window.forceCode.outputChannel.appendLine(listener.targetObject);
@@ -366,13 +366,15 @@ function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position):
         flattenedPosition = flattenedPosition.translate(0, -boundaries[index][0]);
     } else {
         let newFlattenedQuery = '';
+        let newFlattenedPosition = flattenedPosition;
         for (let i: number = 0; i <= boundaries.length; i++) {
             newFlattenedQuery += flattenedQuery.substring(i ? boundaries[i - 1][1] + 1 : 0, i < boundaries.length ? boundaries[i][0] : undefined);
             if (i < boundaries.length && boundaries[i][1] <= flattenedPosition.character) {
-                flattenedPosition = flattenedPosition.translate(0, boundaries[i][0] - boundaries[i][1]);
+                newFlattenedPosition = newFlattenedPosition.translate(0, boundaries[i][0] - boundaries[i][1] - 1);
             }
         }
         flattenedQuery = newFlattenedQuery;
+        flattenedPosition = newFlattenedPosition;
     }
 
     let startMatch = /\b(SELECT)\b/i.exec(flattenedQuery);
@@ -394,13 +396,15 @@ function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): 
         flattenedPosition = flattenedPosition.translate(0, -boundaries[index][0]);
     } else {
         let newFlattenedQuery = '';
+        let newFlattenedPosition = flattenedPosition;
         for (let i: number = 0; i <= boundaries.length; i++) {
             newFlattenedQuery += flattenedQuery.substring(i ? boundaries[i - 1][1] + 1 : 0, i < boundaries.length ? boundaries[i][0] : undefined);
             if (i < boundaries.length && boundaries[i][1] <= flattenedPosition.character) {
-                flattenedPosition = flattenedPosition.translate(0, boundaries[i][0] - boundaries[i][1]);
+                newFlattenedPosition = newFlattenedPosition.translate(0, boundaries[i][0] - boundaries[i][1] - 1);
             }
         }
         flattenedQuery = newFlattenedQuery;
+        flattenedPosition = newFlattenedPosition;
     }
     
     let startMatch = /\b(WHERE)\b/i.exec(flattenedQuery);
