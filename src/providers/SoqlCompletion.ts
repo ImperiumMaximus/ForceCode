@@ -90,7 +90,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
 
         let query: SoqlQuery = getQueryUnderCursor(position);
         let relativePosition: vscode.Position = position.translate(-query.getStartLine() + 1);
-        let relativeFlattenedPosition: vscode.Position = query.flattenPosition(relativePosition, true);
+        //let relativeFlattenedPosition: vscode.Position = query.flattenPosition(relativePosition, true);
         
         let pointRemoved: boolean = false;
         let commaSanitized: boolean = false;
@@ -109,29 +109,30 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
             query.setLastLine(replaceAt(lastLine, lastLine.lastIndexOf(';'), ')'.repeat(parBalance['balance']) + ';')); 
         }
 
+        if (maybeRemoveComma(query, relativePosition)) {
+
+            commaSanitized = true;
+            /*relativeFlattenedPosition = relativeFlattenedPosition.translate(0, 
+                -(query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length) + 1);*/
+        }
+
         relativePosition = maybeRemoveExtraSpaces(query, relativePosition);
              
         if (shouldRemovePoint(query, relativePosition)) {
             query.setLine(relativePosition, replaceAt(query.getLine(relativePosition), relativePosition.character - 1, ''));
             relativePosition = relativePosition.translate(0, -1);
-            relativeFlattenedPosition = relativeFlattenedPosition.translate(0, -1);
+            //relativeFlattenedPosition = relativeFlattenedPosition.translate(0, -1);
             pointRemoved = true;
-        }
-
-        if (maybeRemoveComma(query, relativePosition)) {
-            commaSanitized = true;
-            relativeFlattenedPosition = relativeFlattenedPosition.translate(0, 
-                -(query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length) + 1);
         }
 
         if (shouldCompleteFilter(query, relativePosition, filterToken)) {
             let affectedLine = query.getLine(relativePosition)
              if ((<any>Object).values(ConditionalOperator).includes(filterToken['token'])) {
-                query.setLine(relativePosition, splice(affectedLine, relativeFlattenedPosition.character, 0, 'null'));
+                query.setLine(relativePosition, splice(affectedLine, relativePosition.character, 0, 'null'));
                 filterOperatorDefined = true;
                 targetOperator = filterToken['token'];
             } else {
-                query.setLine(relativePosition, splice(affectedLine, relativeFlattenedPosition.character, 0, '=null'));
+                query.setLine(relativePosition, splice(affectedLine, relativePosition.character, 0, '=null'));
             }
         }
 
@@ -149,7 +150,7 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         parser.buildParseTree = true;
 
         var tree = parser.soqlCodeUnit();
-        var listener = new SoqlTreeListener(relativeFlattenedPosition);
+        var listener = new SoqlTreeListener(query.flattenPosition(relativePosition.translate(0, -1), true));
         ParseTreeWalker.DEFAULT.walk(listener, tree);
 
         vscode.window.forceCode.outputChannel.appendLine(listener.targetObject);
@@ -360,8 +361,7 @@ function maybeAddFakeFields(query: SoqlQuery, position: vscode.Position) {
     let maybeNewPosition = position;
     let shouldIgnoreFieldInCompletion = false;
 
-    for(var i = 0; i < indexes.length; i++) {
-        let element = indexes[i];
+    indexes.forEach(element => {
         let index = element[0] + 7;
         let expandedPosition = query.expandPositiion(index);
         let startPosition = query.expandPositiion(element[0]);
@@ -373,7 +373,7 @@ function maybeAddFakeFields(query: SoqlQuery, position: vscode.Position) {
         if (expandedPosition.isBefore(maybeNewPosition)) {
             maybeNewPosition = maybeNewPosition.translate(0, +2);
         }
-    };
+    });
     
     return { relativePosition: maybeNewPosition, isFakeField: shouldIgnoreFieldInCompletion};
 }
@@ -382,13 +382,23 @@ function isCursorInSelectStatement(query: SoqlQuery, position: vscode.Position):
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
 
-    if (isInSubquery(query, position)) {
-        let boundaries = computeSubQueryBoundaries(query, position);
-        flattenedQuery = flattenedQuery.substring(boundaries['startIndex'], boundaries['endIndex'] + 1);
-        flattenedPosition = flattenedPosition.translate(0, -boundaries['startIndex']);
+    let boundaries = computeSubQueriesBoundaries(query, position);
+    let index = subQueryIndex(boundaries, flattenedPosition);
+
+    if (index >= 0) {
+        flattenedQuery = flattenedQuery = boundaries[index][2];
+        flattenedPosition = flattenedPosition.translate(0, -boundaries[index][0]);
+    } else {
+        let newFlattenedQuery = '';
+        for (let i: number = 0; i <= boundaries.length; i++) {
+            newFlattenedQuery += flattenedQuery.substring(i ? boundaries[i - 1][1] + 1 : 0, i < boundaries.length ? boundaries[i][0] : undefined);
+            if (i < boundaries.length && boundaries[i][1] <= flattenedPosition.character) {
+                flattenedPosition = flattenedPosition.translate(0, boundaries[i][0] - boundaries[i][1]);
+            }
+        }
+        flattenedQuery = newFlattenedQuery;
     }
 
-    //FIXME: this doesn't quite work when there are sub-childrelationship queries in between
     let startMatch = /\b(SELECT)\b/i.exec(flattenedQuery);
     let endMatch = /\b(FROM)\b/i.exec(flattenedQuery);
 
@@ -400,10 +410,21 @@ function isCursorInWhereStatement(query: SoqlQuery, position: vscode.Position): 
     let flattenedQuery = query.prettyPrint();
     let flattenedPosition = query.flattenPosition(position, true);
 
-    if (isInSubquery(query, position)) {
-        let boundaries = computeSubQueryBoundaries(query, position);
-        flattenedQuery = flattenedQuery.substring(boundaries['startIndex'], boundaries['endIndex'] + 1);
-        flattenedPosition = flattenedPosition.translate(0, -boundaries['startIndex']);
+    let boundaries = computeSubQueriesBoundaries(query, position);
+    let index = subQueryIndex(boundaries, flattenedPosition);
+
+    if (index >= 0) {
+        flattenedQuery = flattenedQuery = boundaries[index][2];
+        flattenedPosition = flattenedPosition.translate(0, -boundaries[index][0]);
+    } else {
+        let newFlattenedQuery = '';
+        for (let i: number = 0; i <= boundaries.length; i++) {
+            newFlattenedQuery += flattenedQuery.substring(i ? boundaries[i - 1][1] + 1 : 0, i < boundaries.length ? boundaries[i][0] : undefined);
+            if (i < boundaries.length && boundaries[i][1] <= flattenedPosition.character) {
+                flattenedPosition = flattenedPosition.translate(0, boundaries[i][0] - boundaries[i][1]);
+            }
+        }
+        flattenedQuery = newFlattenedQuery;
     }
     
     let startMatch = /\b(WHERE)\b/i.exec(flattenedQuery);
@@ -519,7 +540,7 @@ function parenthesesBalance(str: string, breakOnBalance?: boolean, startIndex?: 
     return { balance: balance, endIndex: curIndex - 1 };
 }
 
-function computeSubQueryBoundaries(query: SoqlQuery, position: vscode.Position): any {
+function computeSubQueriesBoundaries(query: SoqlQuery, position: vscode.Position): any[] {
     let flattenedQuery = query.prettyPrint(false);
     let flattenedPosition = query.flattenPosition(position, true);
 
@@ -527,25 +548,32 @@ function computeSubQueryBoundaries(query: SoqlQuery, position: vscode.Position):
 
     let matches = getAllIndexesOfMatches(querySubStr, /(\(SELECT)/gi);
 
-    let startMatch = matches && matches.length ? matches[matches.length - 1][0] : 0;
+    let res: any[] = [];
 
-    if (!startMatch) {
-        return null;
-    }
+    matches.forEach(element => {
+        let endMatch = parenthesesBalance(flattenedQuery.substring(element[0]), true);
+        if (!endMatch['balance']) {
+            res.push([element[0], element[0] + endMatch['endIndex'], flattenedQuery.substr(element[0], endMatch['endIndex'] + 1)]);
+        }
+    });
 
-    let endMatch = parenthesesBalance(flattenedQuery.substring(startMatch), true);
-    if (endMatch['balance']) {
-        return null;
-    }
-
-    return { startIndex: startMatch, endIndex: startMatch + endMatch['endIndex'] };
+    return res;
 }
 
-function isInSubquery(query: SoqlQuery, position: vscode.Position) {
-    let boundaries = computeSubQueryBoundaries(query, position);
-    let flattenedPosition = query.flattenPosition(position, true);
+function subQueryIndex(boundaries: any[], position: vscode.Position): number {
+    /*let boundaries = computeSubQueryBoundaries(query, position);
+    let flattenedPosition = query.flattenPosition(position, true);*/
 
-    return boundaries && flattenedPosition.character >= boundaries['startIndex'] && flattenedPosition.character <= boundaries['endIndex'];
+    let res: number = -1;
+
+    for (let i: number = 0; i < boundaries.length && res < 0; i++) {
+        let element: [] = boundaries[i];
+        if (position.character >= element[0] && position.character <= element[1]) {
+            res = i;
+        }
+    }
+    
+    return res;
 }
 
 function getAllIndexesOfMatches(str: string, pattern: RegExp): any[] {
