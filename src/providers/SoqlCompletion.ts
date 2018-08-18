@@ -83,63 +83,31 @@ enum DateLiterals {
     YES  = 'YESTERDAY'
 }
 
-//TODO: check if it is possible to not compute flattenedQuery and flattenedPosition everytime in the query sanitization phase
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Thenable<vscode.CompletionItem[]> {
         var completions: vscode.CompletionItem[] = [];
 
         let query: SoqlQuery = getQueryUnderCursor(position);
         let relativePosition: vscode.Position = position.translate(-query.getStartLine() + 1);
-        //let relativeFlattenedPosition: vscode.Position = query.flattenPosition(relativePosition, true);
-        
+                
         let pointRemoved: boolean = false;
         let commaSanitized: boolean = false;
         let isFakeField: boolean = false;
         
-        let filterToken: {} = {};
         let filterOperatorDefined = false;
         let targetOperator: string = null;
-        
-        let parBalance: {} = {};
 
         // Input sanitization to allow SOQL Parser to properly build a tree from a (possibly) incomplete query statement
-        parBalance = parenthesesBalance(query.prettyPrint());
-        if (parBalance['balance'] > 0) {
-            let lastLine = query.getLastLine();
-            query.setLastLine(replaceAt(lastLine, lastLine.lastIndexOf(';'), ')'.repeat(parBalance['balance']) + ';')); 
-        }
+        maybeBalanceParentheses(query);
 
-        if (maybeRemoveComma(query, relativePosition)) {
-
-            commaSanitized = true;
-            /*relativeFlattenedPosition = relativeFlattenedPosition.translate(0, 
-                -(query.prettyPrint().substring(0, relativeFlattenedPosition.character).match(/\s/g).length) + 1);*/
-        }
-
+        commaSanitized = maybeRemoveComma(query, relativePosition);
         relativePosition = maybeRemoveExtraSpaces(query, relativePosition);
-             
-        if (shouldRemovePoint(query, relativePosition)) {
-            query.setLine(relativePosition, replaceAt(query.getLine(relativePosition), relativePosition.character - 1, ''));
-            relativePosition = relativePosition.translate(0, -1);
-            //relativeFlattenedPosition = relativeFlattenedPosition.translate(0, -1);
-            pointRemoved = true;
-        }
+            
+        ({relativePosition, pointRemoved} = maybeRemovePoint(query, relativePosition));
 
-        if (shouldCompleteFilter(query, relativePosition, filterToken)) {
-            let affectedLine = query.getLine(relativePosition)
-             if ((<any>Object).values(ConditionalOperator).includes(filterToken['token'])) {
-                query.setLine(relativePosition, splice(affectedLine, relativePosition.character, 0, 'null'));
-                filterOperatorDefined = true;
-                targetOperator = filterToken['token'];
-            } else {
-                query.setLine(relativePosition, splice(affectedLine, relativePosition.character, 0, '=null'));
-            }
-        }
-
-        if (shouldAddComma(query, relativePosition)) {
-            query.setLine(relativePosition, replaceAt(query.getLine(relativePosition), relativePosition.character, ','));
-            commaSanitized = true;
-        }
+        ({filterOperatorDefined, targetOperator} = maybeCompleteFilter(query, relativePosition));
+        
+        commaSanitized = commaSanitized || maybeAddComma(query, relativePosition);
 
         ({relativePosition, isFakeField} = maybeAddFakeFields(query, relativePosition));
 
@@ -352,8 +320,16 @@ function isCustom(sObjectName: string): boolean {
     return sObjectName.endsWith('__c') || sObjectName.endsWith('__mdt') || sObjectName.endsWith('__e') || sObjectName.endsWith('__x') || sObjectName.endsWith('__b');
 }
 
-function shouldRemovePoint(query: SoqlQuery, position: vscode.Position): boolean {
-    return position.character && query.getLine(position).substring(position.character - 1, position.character) == '.';
+function maybeRemovePoint(query: SoqlQuery, position: vscode.Position): any {
+    let maybeNewPosition = position;
+    let removed = position.character && query.getLine(position).substring(position.character - 1, position.character) == '.';
+
+    if (removed) {
+        query.setLine(maybeNewPosition, replaceAt(query.getLine(maybeNewPosition), maybeNewPosition.character - 1, ''));
+        maybeNewPosition = maybeNewPosition.translate(0, -1);
+    }
+
+    return {relativePosition: maybeNewPosition, pointRemoved: removed};
 }
 
 function maybeAddFakeFields(query: SoqlQuery, position: vscode.Position) {
@@ -458,12 +434,27 @@ function maybeRemoveComma(query: SoqlQuery, position: vscode.Position): boolean 
     return result;
 }
 
-function shouldCompleteFilter(query: SoqlQuery, position: vscode.Position, token: {}): boolean {
+function maybeCompleteFilter(query: SoqlQuery, position: vscode.Position): any {
     if (!isCursorInWhereStatement(query, position)) return false;
 
-    token['token'] = extractFilterToken(query, position);
+    let token = extractFilterToken(query, position);
 
-    return token['token'].trim() === token['token'];
+    let completed = token.trim() === token;
+    let filterOperatorDefined: boolean = false;
+    let targetOperator: string = '';
+
+    if (completed) {
+        let affectedLine = query.getLine(position)
+        if ((<any>Object).values(ConditionalOperator).includes(token)) {
+            query.setLine(position, splice(affectedLine, position.character, 0, 'null'));
+            filterOperatorDefined = true;
+            targetOperator = token;
+        } else {
+            query.setLine(position, splice(affectedLine, position.character, 0, '=null'));
+        }
+    }
+
+    return {filterOperatorDefined: filterOperatorDefined, targetOperator: targetOperator};
 }
 
 function extractFilterToken(query: SoqlQuery, position: vscode.Position) {
@@ -494,7 +485,7 @@ function extractFilterToken(query: SoqlQuery, position: vscode.Position) {
     return flattenedQuery.substring(startIndex, match[1]);
 }
 
-function shouldAddComma(query: SoqlQuery, position: vscode.Position): boolean {
+function maybeAddComma(query: SoqlQuery, position: vscode.Position): boolean {
     if (!isCursorInSelectStatement(query, position)) return false;
 
     let flattenedQuery = query.prettyPrint();
@@ -502,8 +493,14 @@ function shouldAddComma(query: SoqlQuery, position: vscode.Position): boolean {
 
     let querySubstrToEnd = flattenedQuery.substring(flattenedPosition.character);
 
-    var match = querySubstrToEnd.match(/([a-z]\w+\.?)/i);
-    return match && match.length && match[0].toLocaleUpperCase() !== 'FROM';
+    var match = querySubstrToEnd.match(/,|([a-z]\w+\.?)/i);
+    let added = match && match.length && match[0] !== ',' && match[0].toLocaleUpperCase() !== 'FROM';
+
+    if (added) {
+        query.setLine(position, replaceAt(query.getLine(position), position.character, ','));
+    }
+
+    return added;
 }
 
 function maybeRemoveExtraSpaces(query: SoqlQuery, position: vscode.Position): vscode.Position {
@@ -525,6 +522,14 @@ function replaceAt(str, index, replace): string {
 
 function splice(str: string, idx: number, rem: number, newStr: string): string {
     return str.slice(0, idx) + newStr + str.slice(idx + Math.abs(rem));
+}
+
+function maybeBalanceParentheses(query: SoqlQuery) {
+    let parBalance = parenthesesBalance(query.prettyPrint());
+    if (parBalance['balance'] > 0) {
+        let lastLine = query.getLastLine();
+        query.setLastLine(replaceAt(lastLine, lastLine.lastIndexOf(';'), ')'.repeat(parBalance['balance']) + ';')); 
+    }
 }
 
 function parenthesesBalance(str: string, breakOnBalance?: boolean, startIndex?: number, endIndex?: number): any {
