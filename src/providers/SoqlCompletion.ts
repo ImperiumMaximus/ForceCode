@@ -524,10 +524,10 @@ function computeSubQueryBoundaries(query: SoqlQuery, position: vscode.Position):
     let flattenedPosition = query.flattenPosition(position, true);
 
     let querySubStr = flattenedQuery.substring(0, flattenedPosition.character);
-    //TODO: this should be improved
-    let matches = /TCELES\(/ig.exec(reverse(querySubStr));
 
-    let startMatch = matches && matches.index ? querySubStr.length - matches.index - 7 : 0;
+    let matches = getAllIndexesOfMatches(querySubStr, /(\(SELECT)/gi);
+
+    let startMatch = matches && matches.length ? matches[matches.length - 1][0] : 0;
 
     if (!startMatch) {
         return null;
