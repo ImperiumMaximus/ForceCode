@@ -67,7 +67,7 @@ export class SoqlQuery {
         return new vscode.Position(1, character);
     }
 
-    public expandPositiion(idx: number): vscode.Position {
+    public expandPosition(idx: number): vscode.Position {
         if (this.queryLines.length == 1) {
             return new vscode.Position(1, idx);
         }
@@ -122,8 +122,8 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
             let matches = /(\w+) at Row:\d+:Column:(\d+)\W(.*)/gmi.exec(errors);
 
             if (matches && matches.length === 4) {
-                let failurePosition = new vscode.Position(query.getStartLine(), parseInt(matches[2]) - 1);
-                var failureRange: vscode.Range = document.lineAt(query.getStartLine()).range.with(failurePosition);
+                let failurePosition = query.expandPosition(parseInt(matches[2])).translate(query.getStartLine() - 1, -1);
+                var failureRange: vscode.Range = document.lineAt(failurePosition.line).range.with(failurePosition);
                 diagnostics.push(new vscode.Diagnostic(failureRange, matches[3], vscode.DiagnosticSeverity.Error));
             }
         }

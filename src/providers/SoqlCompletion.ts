@@ -356,9 +356,9 @@ function maybeAddFakeFields(query: SoqlQuery, position: vscode.Position) {
 
     indexes.forEach(element => {
         let index = element[0] + 7;
-        let expandedPosition = query.expandPositiion(index);
-        let startPosition = query.expandPositiion(element[0]);
-        let endPosition = query.expandPositiion(element[1]);
+        let expandedPosition = query.expandPosition(index);
+        let startPosition = query.expandPosition(element[0]);
+        let endPosition = query.expandPosition(element[1]);
         shouldIgnoreFieldInCompletion = shouldIgnoreFieldInCompletion || 
             (maybeNewPosition.isAfterOrEqual(startPosition) && maybeNewPosition.isBeforeOrEqual(endPosition));
         
@@ -446,7 +446,7 @@ function maybeRemoveComma(query: SoqlQuery, position: vscode.Position): boolean 
                     match && match.length && (match[0].toLocaleUpperCase() === 'FROM' || match[0].startsWith('('));
 
     if (result) {
-        let expandedLastCommaPosition = query.expandPositiion(lastCommaPosition);
+        let expandedLastCommaPosition = query.expandPosition(lastCommaPosition);
         let affectedLine = query.getLine(expandedLastCommaPosition);
 
         query.setLine(expandedLastCommaPosition, replaceAt(affectedLine, expandedLastCommaPosition.character - 1, ' '));        
