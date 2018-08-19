@@ -118,9 +118,11 @@ export default function retrieve(context: vscode.ExtensionContext, document?: vs
                 detail: `All Unpackaged`,
                 description: 'unpackaged',
             });
-            if (document !== undefined && !document.fileName.endsWith('-meta.xml')) {
+            if (document !== undefined && 
+                document.fileName.startsWith(vscode.window.forceCode.workspaceRoot) &&
+                !document.fileName.endsWith('-meta.xml')) {
                 options.push({
-                    label: `$(code) Get ${decodeURI(baseName)} from org`,
+                    label: `$(code) Get ${path.join(srcSubFolder, decodeURI(baseName))} from org`,
                     detail: `Retrieve single file`,
                     description: 'file',
                 });
