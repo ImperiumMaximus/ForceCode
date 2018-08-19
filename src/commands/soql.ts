@@ -159,10 +159,6 @@ export function getQueryUnderCursor(pos: vscode.Position): SoqlQuery {
         while (startLine > 0 && !currentLineText.trim().toLocaleUpperCase().startsWith('SELECT')) {
             currentLineText = vscode.window.activeTextEditor.document.lineAt(startLine--).text;
         }
-
-/*        if (startLine < 0) {
-            reject('Cannot find start boundary of query under cursor');
-        }*/
     }
 
     if (endLine < (vscode.window.activeTextEditor.document.lineCount - 1)) {
@@ -170,10 +166,6 @@ export function getQueryUnderCursor(pos: vscode.Position): SoqlQuery {
         while (endLine < (vscode.window.activeTextEditor.document.lineCount - 1) && !currentLineText.trim().endsWith(';')) {
             currentLineText = vscode.window.activeTextEditor.document.lineAt(++endLine).text;
         }
-
-/*        if (endLine > vscode.window.activeTextEditor.document.lineCount) {
-            reject('Cannot find end boundary of query under cursor');
-        }*/
     }
     
     let curLine = startLine;
