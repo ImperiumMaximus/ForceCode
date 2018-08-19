@@ -83,7 +83,6 @@ enum DateLiterals {
     YES  = 'YESTERDAY'
 }
 
-// TODO: manage aliases
 // NICE TO HAVE: highlight offending piece of query on error
 export default class SoqlCompletionProvider implements vscode.CompletionItemProvider {
     public provideCompletionItems(document: vscode.TextDocument, position: vscode.Position, token: vscode.CancellationToken): Thenable<vscode.CompletionItem[]> {
@@ -191,6 +190,10 @@ function getFieldCompletions(listener: SoqlTreeListener, pointRemoved: boolean, 
     if (!commaSanitized && !isFakeField) {
         for (var i = 0; i < fieldTokens.length; i++) {
             let targetField: string = fieldTokens[i];
+
+            if (targetField === listener.targetObjectAlias) {
+                continue;
+            }
 
             let query;
             let options: {} = {};
@@ -609,10 +612,12 @@ function getAllIndexesOfMatches(str: string, pattern: RegExp): any[] {
 class SoqlTreeListener implements SoqlListener {
     pos: vscode.Position;
     targetObject: string = null;
+    targetObjectAlias: string = null;
     targetRelationshipObject: string = null;
     targetField: string = '';
     targetFieldCtx: FieldContext = FieldContext.UNKNOWN;
     subQueryType: SubQueryType = SubQueryType.UNKNOWN;
+    aliasToFieldMap = {};
 
     constructor(position: vscode.Position) {
         this.pos = position;
@@ -633,7 +638,12 @@ class SoqlTreeListener implements SoqlListener {
         if (curCtx && (curCtx instanceof SoqlParser.WhereSubqueryContext) && 
             this.isInRange(curCtx.start, curCtx.stop) ||
             (curCtx instanceof SoqlParser.SoqlStatementContext && !this.targetObject)) {
-            this.targetObject = ctx.text;
+            if (ctx.childCount == 2) { // has alias?
+                this.targetObject = ctx.children[0].text;
+                this.targetObjectAlias = ctx.children[1].text;
+            } else {
+                this.targetObject = ctx.text;
+            }
 
             if (curCtx instanceof SoqlParser.WhereSubqueryContext) {
                 this.subQueryType = SubQueryType.SEMIJOIN;
@@ -684,7 +694,14 @@ class SoqlTreeListener implements SoqlListener {
     }
  
     enterFieldItem = (ctx: SoqlParser.FieldItemContext) => {
+        if (ctx.childCount == 2) { // has alias?
+            this.aliasToFieldMap[ctx.children[1].text] = ctx.children[0].text;
+        }
+    }
+
+    enterFieldName = (ctx: SoqlParser.FieldNameContext) => {
         let curCtx: ParserRuleContext = ctx;
+
         while (curCtx && !(curCtx instanceof SoqlParser.ConditionExpressionContext)) {
             curCtx = curCtx.parent;
         }
@@ -693,17 +710,9 @@ class SoqlTreeListener implements SoqlListener {
 
         if (this.isInRange(curCtx.start, curCtx.stop, true)) {
             this.targetField = ctx.text;
-        }
-    }
-
-    enterFieldName = (ctx: SoqlParser.FieldNameContext) => {
-        if (!(ctx.parent instanceof SoqlParser.WhereSubqueryContext)) {
-            return;
-        }
-
-        if (this.isInRange(ctx.start, ctx.stop, true)) {
-            this.targetField = ctx.text;
-            this.targetFieldCtx = FieldContext.SELECT;
+            if (ctx.parent instanceof SoqlParser.WhereSubqueryContext) {
+                this.targetFieldCtx = FieldContext.SELECT;
+            }
         }
     }
 
