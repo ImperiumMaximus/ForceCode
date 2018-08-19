@@ -87,22 +87,24 @@ export class SoqlQuery {
 export default function soql(context: vscode.ExtensionContext): Promise<any> {
     var interval: any = undefined;
     const spinner: any = elegantSpinner();
+    var query: SoqlQuery = undefined;
+    let errors = undefined;
+    let diagnosticCollection: vscode.DiagnosticCollection;
+
     return vscode.window.forceCode.connect(context)
         .then(svc => getSoqlQuery(svc))
         .then(finished, onError);
 
     function getSoqlQuery(svc) {
         return new Promise((resolve, reject) => {
-            let query = getQueryUnderCursor(vscode.window.activeTextEditor.selection.start).prettyPrint();
+            query = getQueryUnderCursor(vscode.window.activeTextEditor.selection.start);
 
             clearInterval(interval);
             interval = setInterval(function () {
                 vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query ' + spinner();
             }, 50);
-            return vscode.window.forceCode.conn.query(query, (err, res) => {
-                if (err) {
-                    reject(err);
-                }
+            return vscode.window.forceCode.conn.query(query.prettyPrint(), (err, res) => {
+                errors = err;
                 resolve(res);
             });
         });
@@ -112,9 +114,30 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
         // Take the results
         // And write them to a file
         clearInterval(interval);
-        vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query $(thumbsup)';
-        vscode.window.forceCode.outputChannel.appendLine(JSON.stringify(res));
+
+        let document = vscode.window.activeTextEditor.document;
+        var diagnostics: vscode.Diagnostic[] = [];
+
+        if (errors) {
+            let matches = /(\w+) at Row:\d+:Column:(\d+)\W(.*)/gmi.exec(errors);
+
+            if (matches && matches.length === 4) {
+                let failurePosition = new vscode.Position(query.getStartLine(), parseInt(matches[2]) - 1);
+                var failureRange: vscode.Range = document.lineAt(query.getStartLine()).range.with(failurePosition);
+                diagnostics.push(new vscode.Diagnostic(failureRange, matches[3], vscode.DiagnosticSeverity.Error));
+            }
+        }
+
+        vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
+
+        if (diagnostics.length > 0) {
+            vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query $(thumbsdown)';
+        } else {            
+            vscode.window.forceCode.statusBarItem.text = 'ForceCode: Run SOQL Query $(thumbsup)';
+            vscode.window.forceCode.outputChannel.appendLine(JSON.stringify(res));
+        }
     }
+
     function onError(err) {
         // Take the results
         // And write them to a file
