@@ -113,7 +113,6 @@ export function activate(context: vscode.ExtensionContext): any {
 
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         context.subscriptions.push(vscode.workspace.createFileSystemWatcher(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'force.json')).onDidChange(uri => { 
-            vscode.window.forceCode.userInfo = undefined
             vscode.window.forceCode.connect(context)
         }));
     }

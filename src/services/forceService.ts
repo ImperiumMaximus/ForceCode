@@ -26,6 +26,7 @@ export default class ForceService implements forceCode.IForceService {
   public userInfo: any;
   public isLoggedIn: boolean;
   public username: string;
+  public url: string;
   public statusBarItem: vscode.StatusBarItem;
   public outputChannel: vscode.OutputChannel;
   public operatingSystem: string;
@@ -145,6 +146,7 @@ export default class ForceService implements forceCode.IForceService {
     if (
       self.userInfo === undefined ||
       self.config.username !== self.username ||
+      self.config.url !== self.url ||
       !self.config.password
     ) {
       var connectionOptions: ConnectionOptions = {
@@ -173,9 +175,10 @@ export default class ForceService implements forceCode.IForceService {
         .then(getPublicDeclarations)
         .then(getPrivateDeclarations)
         .then(getManagedDeclarations)
-        .catch(err =>
-          error.outputError(err, vscode.window.forceCode.outputChannel)
-        );
+        .catch(err => {
+          if (self.userInfo) { self.userInfo = undefined; }
+          error.outputError(err, vscode.window.forceCode.outputChannel) 
+        });
 
       function doLogin(): Promise<UserInfo> {
         return new Promise((resolve, reject) => {
@@ -197,6 +200,7 @@ export default class ForceService implements forceCode.IForceService {
         );
         self.userInfo = userInfo;
         self.username = config.username;
+        self.url = config.url;
         self.isLoggedIn = true;
         return self;
       }
