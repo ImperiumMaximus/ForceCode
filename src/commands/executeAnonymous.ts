@@ -90,7 +90,6 @@ export default function executeAnonymous(document: vscode.TextDocument, context:
 
 function runDiagnostics(res: jsforce.ExecuteAnonymousResponse, _document: vscode.TextDocument) {
     // Create a diagnostic Collection for the current file.  Overwriting the last...
-    var diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection(_document.fileName);
     var diagnostics: vscode.Diagnostic[] = [];
     var result = res.body.result;
     var header: any = res.header;
@@ -103,7 +102,7 @@ function runDiagnostics(res: jsforce.ExecuteAnonymousResponse, _document: vscode
       }
       diagnostics.push(new vscode.Diagnostic(failureRange, result.compileProblem));
     }
-    diagnosticCollection.set(_document.uri, diagnostics);
+    vscode.window.forceCode.diagnosticCollection.set(_document.uri, diagnostics);
     // TODO: Make the Success message derive from the componentSuccesses, maybe similar to above code for failures
     if (diagnostics.length > 0) {
       vscode.window.forceCode.statusBarItem.text = `ForceCode: Execute Anonymous Errors $(alert)`;
