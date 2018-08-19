@@ -191,7 +191,7 @@ function getFieldCompletions(listener: SoqlTreeListener, pointRemoved: boolean, 
         for (var i = 0; i < fieldTokens.length; i++) {
             let targetField: string = fieldTokens[i];
 
-            if (targetField === listener.targetObjectAlias) {
+            if (pointRemoved && targetField === listener.targetObjectAlias) {
                 continue;
             }
 
