@@ -138,7 +138,6 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
                         } else {
                             vscode.window.forceCode.statusBarItem.text = 'ForceCode: All Tests Passed $(thumbsup)';
                         }
-                        let diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection('Test Failures');
                         res.successes.forEach(function (success) {
                             let members: forceCode.IWorkspaceMember[] = vscode.window.forceCode.workspaceMembers;
                             let member: forceCode.IWorkspaceMember = members && members.reduce((prev, curr) => {
@@ -148,7 +147,7 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
                             if (member) {
                                 let docUri: vscode.Uri = vscode.Uri.file(member.path);
                                 let diagnostics: vscode.Diagnostic[] = [];
-                                diagnosticCollection.set(docUri, diagnostics);
+                                vscode.window.forceCode.diagnosticCollection.set(docUri, diagnostics);
                             }
                         });
                         res.failures.forEach(function (failure) {
@@ -172,13 +171,13 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
                                     let docLocation: vscode.Location = new vscode.Location(docUri, new vscode.Position(_lin, col));
                                     let failureRange: vscode.Range = docLocation.range.with(new vscode.Position(_lin, Number.MAX_VALUE));
                                     let diagnostics: vscode.Diagnostic[] = [];
-                                    if (diagnosticCollection.has(docUri)) {
-                                        let ds: vscode.Diagnostic[] = diagnosticCollection.get(docUri);
+                                    if (vscode.window.forceCode.diagnosticCollection.has(docUri)) {
+                                        let ds: vscode.Diagnostic[] = vscode.window.forceCode.diagnosticCollection.get(docUri);
                                         diagnostics = diagnostics.concat(ds);
                                     }
                                     let diagnostic: vscode.Diagnostic = new vscode.Diagnostic(failureRange, failure.message, vscode.DiagnosticSeverity.Information);
                                     diagnostics.push(diagnostic);
-                                    diagnosticCollection.set(docUri, diagnostics);
+                                    vscode.window.forceCode.diagnosticCollection.set(docUri, diagnostics);
                                 }
                             }
                             let errorMessage: string = 'FAILED: ' + failure.stackTrace + '\n' + failure.message;
@@ -260,13 +259,12 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
                             }, undefined);
 
                             if (member) {
-                                let diagnosticCollection2: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection(member.memberInfo.type);
                                 let diagnostics: vscode.Diagnostic[] = [];
                                 let warningMessage: string = warning.message;
                                 let docUri: vscode.Uri = vscode.Uri.file(member.path);
                                 let docLocation: vscode.Location = new vscode.Location(docUri, new vscode.Position(0, 0));
                                 diagnostics.push(new vscode.Diagnostic(docLocation.range, warningMessage, 1));
-                                diagnosticCollection2.set(docUri, diagnostics);
+                                vscode.window.forceCode.diagnosticCollection.set(docUri, diagnostics);
                             } else if (warning.message) {
                                 vscode.window.forceCode.outputChannel.appendLine(warning.message);
                             }

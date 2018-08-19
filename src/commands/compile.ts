@@ -475,7 +475,6 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
     // =======================================================================================================================================
     function finished(res: any): boolean {
         // Create a diagnostic Collection for the current file.  Overwriting the last...
-        var diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection(document.fileName);
         var diagnostics: vscode.Diagnostic[] = [];
         if (res.records && res.records.length > 0) {
             res.records.filter(r => r.State !== 'Error').forEach(containerAsyncRequest => {
@@ -501,7 +500,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             vscode.window.forceCode.statusBarItem.text = `${name} ${DefType ? DefType : ''} $(alert)`;
         }
         // TODO: Make the Success message derive from the componentSuccesses, maybe similar to above code for failures
-        diagnosticCollection.set(document.uri, diagnostics);
+        vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
         if (diagnostics.length > 0) {
             // FAILURE !!! 
             vscode.window.forceCode.statusBarItem.text = `${name} ${DefType ? DefType : ''} $(alert)`;
@@ -536,7 +535,6 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
     }
 
     function toolingError(err) {
-        var diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection(document.fileName);
         var diagnostics: vscode.Diagnostic[] = [];
         var splitString: string[] = err.message.split(fileName + ':');
         var partTwo: string = splitString.length > 1 ? splitString[1] : '1,1:Unknown error';
@@ -552,13 +550,12 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             failureRange = failureRange.with(new vscode.Position((failureLineNumber - 1), failureColumnNumber));
         }
         diagnostics.push(new vscode.Diagnostic(failureRange, errorMessage, 0));
-        diagnosticCollection.set(document.uri, diagnostics);
+        vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
 
         error.outputError({ message: statusMessage }, vscode.window.forceCode.outputChannel);
         return false;
     }
     function metadataError(err) {
-        var diagnosticCollection: vscode.DiagnosticCollection = vscode.languages.createDiagnosticCollection(document.fileName);
         var diagnostics: vscode.Diagnostic[] = [];
         var errorInfo: string[] = err.message.split('\n');
         var line: number = errorInfo[1] ? Number(errorInfo[1].split('Line: ')[1]) : 1;
@@ -568,7 +565,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             failureRange = failureRange.with(new vscode.Position((line), col));
         }
         diagnostics.push(new vscode.Diagnostic(failureRange, (errorInfo[0] || 'unknown error') + (errorInfo[3] || ''), 0));
-        diagnosticCollection.set(document.uri, diagnostics);
+        vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
 
         error.outputError(err, vscode.window.forceCode.outputChannel);
         return false;
