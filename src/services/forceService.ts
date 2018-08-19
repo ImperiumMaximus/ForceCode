@@ -31,6 +31,7 @@ export default class ForceService implements forceCode.IForceService {
   public operatingSystem: string;
   public workspaceRoot: string;
   public workspaceMembers: forceCode.IWorkspaceMember[];
+  public diagnosticCollection: vscode.DiagnosticCollection;
 
   constructor() {
     // Set the ForceCode configuration
@@ -61,6 +62,7 @@ export default class ForceService implements forceCode.IForceService {
         this.statusBarItem.text = 'ForceCode: Missing Configuration';
       });
     this.statusBarItem.show();
+    this.diagnosticCollection = vscode.languages.createDiagnosticCollection('ForceCode-' + newGuid());
   }
   public connect(): Promise<forceCode.IForceService> {
     return this.setupConfig().then(this.login);
@@ -291,4 +293,11 @@ export default class ForceService implements forceCode.IForceService {
       return Promise.resolve(self);
     }
   }
+}
+
+function newGuid() {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+      const r = Math.random() * 16 | 0, v = c === 'x' ? r : ( r & 0x3 | 0x8 );
+      return v.toString(16);
+  });
 }
