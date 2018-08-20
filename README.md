@@ -26,7 +26,7 @@ Please note that the following permissions are required to develop on the Force.
     * Errors in the editor on test failures
     * Auto-open test log
     * Easy to run a single tests, multiple tests, or all tests in a Class
-* Intellisense / Code Completion for Apex (in progress)
+* ~~Intellisense / Code Completion for Apex (in progress)~~ You can use the official plugin with a dummy `sfdx-project.json` like [this](https://github.com/forcedotcom/sfdx-dreamhouse/blob/master/sfdx-project.json) in the workspace root
 * Execute Anonymous
 * View / Save Debug Logs
 * Open / Retrieve a file
@@ -35,10 +35,11 @@ Please note that the following permissions are required to develop on the Force.
     * Replaces need for CumulusCI w/ Ant
     * Retrieve detailed deploy information
     * Runs Validation deploys
-* Retrieve Package - three options
+* Retrieve Package - four options
     * Retrieve all metadata
     * Retrieve by selecting from available Packages
-    * Retrieve by package.xml    
+    * Retrieve by package.xml
+    * Retrieve the current opened file    
 * Bundle & Deploy Static Resources on save
     * Auto refresh the browser on save
     * Works great with autosave
@@ -49,6 +50,8 @@ Please note that the following permissions are required to develop on the Force.
     * Quickly run [SOQL Queries](https://developer.salesforce.com/docs/atlas.en-us.soql_sosl.meta/soql_sosl/sforce_api_calls_soql.htm)
     * Query [Tooling Objects](https://developer.salesforce.com/docs/atlas.en-us.api_tooling.meta/api_tooling/reference_objects_list.htm)
     * Results are returned as JSON 
+    * Autocompletion
+    * Diagnostics on malformed queries
 * Arbitrary folder structure
     * Change your project `src` folder
     * Flexible project structure
@@ -250,6 +253,14 @@ Menu: &gt;Force: Get Logs
 Menu: &gt;ForceCode Menu ... Create Class  
 This will automatically create classes based on `apiVersion` else it defaults to '37.0'.
 
+### SOQL autocompletion
+
+![Autocompletion example](https://raw.githubusercontent.com/ImperiumMaximus/ForceCode/master/images/soql_autocomplete.gif)
+
+You can activate autompletion by changing language mode on the active editor to SOQL. 
+The language definition can be installed using the [https://github.com/ImperiumMaximus/vscode-soql-extension](https://github.com/ImperiumMaximus/vscode-soql-extension).
+Furthermore the describe of the SObjects must be downloaded through Menu: &gt;Force: Download sObjects Describe
+
 ### ~~Build package.xml~~
 
 Menu: &gt;ForceCode Menu ... Package-xml
@@ -290,7 +301,7 @@ Step 6.  Have Fun!
 
 ## Future goals
 
-* Intellisense code completion (in progress)
+* ~~Intellisense code completion (in progress)~~
 * Implement checkpoints in the editor
 
 ## Change Log

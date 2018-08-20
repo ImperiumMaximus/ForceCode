@@ -24,4 +24,9 @@ force.json
 open.spec.js
 *.vsix
 /**/*.vsix
+src/providers/grammars/soql/Soql.tokens
+src/providers/grammars/soql/SoqlLexer.*
+src/providers/grammars/soql/SoqlListener.*
+src/providers/grammars/soql/SoqlParser.*
+src/providers/grammars/soql/SoqlVisitor.*
 

@@ -262,6 +262,9 @@ export default function retrieve(context: vscode.ExtensionContext, document?: vs
 
     function processResult(stream: NodeJS.ReadableStream) {
         return new Promise(function (resolve, reject) {
+            if (!stream) {
+                reject({ message: 'Aborted by user' });
+            }
             var bufs: any = [];
             stream.on('data', function (d) {
                 bufs.push(d);
@@ -332,7 +335,7 @@ export default function retrieve(context: vscode.ExtensionContext, document?: vs
             return _consoleLogReference.apply(this, arguments);
         };
         console.error = function () {
-            if (!arguments[0].match(/DeprecationWarning\:/)) {
+            if (!arguments[0].message.match(/DeprecationWarning\:/)) {
                 vscode.window.forceCode.outputChannel.appendLine(arguments[0]);
             }
             return _consoleErrorReference.apply(this, arguments);

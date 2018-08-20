@@ -8,6 +8,7 @@ import * as commands from './commands';
 import * as parsers from './parsers';
 import * as path from 'path';
 import { updateDecorations } from './decorators/testCoverageDecorator';
+import SoqlCompletionProvider from './providers/SoqlCompletion';
 
 export function activate(context: vscode.ExtensionContext): any {
     vscode.window.forceCode = new ForceService();
@@ -25,6 +26,10 @@ export function activate(context: vscode.ExtensionContext): any {
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.executeAnonymous', () => {
         commands.executeAnonymous(vscode.window.activeTextEditor.document, context);
+    }));
+
+    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.soql', () => {
+        commands.soql(context);
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.getLog', () => {
@@ -100,6 +105,7 @@ export function activate(context: vscode.ExtensionContext): any {
 
     // Code Completion Provider
     context.subscriptions.push(vscode.languages.registerCompletionItemProvider('apex', new ApexCompletionProvider(), '.', '@'));
+    context.subscriptions.push(vscode.languages.registerCompletionItemProvider('soql', new SoqlCompletionProvider(), '.', ' '));
 
     // Text Coverage Decorators
     context.subscriptions.push(vscode.window.onDidChangeActiveTextEditor(editorUpdateApexCoverageDecorator));
@@ -107,7 +113,6 @@ export function activate(context: vscode.ExtensionContext): any {
 
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         context.subscriptions.push(vscode.workspace.createFileSystemWatcher(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'force.json')).onDidChange(uri => { 
-            vscode.window.forceCode.userInfo = undefined
             vscode.window.forceCode.connect(context)
         }));
     }

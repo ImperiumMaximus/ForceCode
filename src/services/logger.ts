@@ -91,7 +91,7 @@ export default class Logger {
             .filter(line => !!line.match(regex))
             .map(line => line.split('\|DEBUG\|')[1])
             .join('\n');
-        return chalk.red(debug);
+        return chalk.default.red(debug);
     }
 
     showLog(logBody) {

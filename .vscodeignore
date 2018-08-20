@@ -9,5 +9,5 @@ src/**/*
 out/test/**
 **/*.js.map
 *.vsix
-out/
 .vscode-test/**
+.sfdx/**
