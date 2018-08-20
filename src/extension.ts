@@ -7,7 +7,6 @@ import { editorUpdateApexCoverageDecorator, documentUpdateApexCoverageDecorator 
 import * as commands from './commands';
 import * as parsers from './parsers';
 import * as path from 'path';
-import { updateDecorations } from './decorators/testCoverageDecorator';
 import SoqlCompletionProvider from './providers/SoqlCompletion';
 
 export function activate(context: vscode.ExtensionContext): any {
@@ -84,7 +83,6 @@ export function activate(context: vscode.ExtensionContext): any {
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.testCoverage', () => {
         commands.testCoverage();
-        updateDecorations();
     }));
 
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.describe', () => {
