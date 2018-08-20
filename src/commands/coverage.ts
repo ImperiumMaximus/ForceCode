@@ -11,10 +11,10 @@ const quickPickOptions: vscode.QuickPickOptions = {
 export default function testCoverage() {
     let config = vscode.window.forceCode.config;
     let options: vscode.QuickPickItem[] = [{
-        description: 'Show lines test coverage on Apex classes',
+        description: 'Show lines not covered by tests on Apex classes/triggers',
         label: 'Yes',
     }, {
-        description: 'Don\'t show lines test coverage on Apex classes',
+        description: 'Don\'t show lines not covered by tests on Apex classes/triggers',
         label: 'No',
     },
     ];
