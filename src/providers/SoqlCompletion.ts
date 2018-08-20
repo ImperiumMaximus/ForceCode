@@ -122,10 +122,6 @@ export default class SoqlCompletionProvider implements vscode.CompletionItemProv
         var listener = new SoqlTreeListener(query.flattenPosition(relativePosition, true).translate(0, -1));
         ParseTreeWalker.DEFAULT.walk(listener, tree);
 
-        vscode.window.forceCode.outputChannel.appendLine(listener.targetObject);
-        vscode.window.forceCode.outputChannel.appendLine(listener.targetField);
-        vscode.window.forceCode.outputChannel.appendLine(listener.targetFieldCtx.toString());
-
         if (filterOperatorDefined && targetOperator && listener.targetField && listener.targetObject) {
             completions.push(...getFilterCompletions(listener));
         } else if (listener.shouldCompleteField()) {
