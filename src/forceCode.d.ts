@@ -137,6 +137,7 @@ export interface IForceService {
     userInfo?: UserInfo;
     isLoggedIn?: boolean;
     username?: string;
+    url?: string;
     outputChannel: vscode.OutputChannel;
     statusBarItem: vscode.StatusBarItem;
     diagnosticCollection: vscode.DiagnosticCollection;
