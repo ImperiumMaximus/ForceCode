@@ -590,7 +590,7 @@ function subQueryIndex(boundaries: any[], position: vscode.Position): number {
     let res: number = -1;
 
     for (let i: number = 0; i < boundaries.length && res < 0; i++) {
-        let element: [] = boundaries[i];
+        let element = boundaries[i];
         if (position.character >= element[0] && position.character <= element[1]) {
             res = i;
         }
