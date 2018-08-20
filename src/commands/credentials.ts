@@ -14,7 +14,6 @@ export default function enterCredentials() {
         .then(cfg => getPassword(cfg))
         .then(cfg => getUrl(cfg))
         .then(cfg => getAutoCompile(cfg))
-        .then(cfg => getShowTestCoverage(cfg))
         .then(cfg => finished(cfg))
         .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));
     // =======================================================================================================================================
@@ -76,20 +75,6 @@ export default function enterCredentials() {
         });
         return vscode.window.showQuickPick(options, quickPickOptions).then((res: vscode.QuickPickItem) => {
             config.url = res.description || 'https://login.salesforce.com';
-            return config;
-        });
-    }
-    function getShowTestCoverage(config) {
-        let options: vscode.QuickPickItem[] = [{
-            description: 'Show lines test coverage on Apex classes',
-            label: 'Yes',
-        }, {
-            description: 'Don\'t show lines test coverage on Apex classes',
-            label: 'No',
-        },
-        ];
-        return vscode.window.showQuickPick(options, quickPickOptions).then((res: vscode.QuickPickItem) => {
-            config.showTestCoverage = res.label === 'Yes';
             return config;
         });
     }

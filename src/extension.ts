@@ -82,8 +82,8 @@ export function activate(context: vscode.ExtensionContext): any {
         commands.diff(vscode.window.activeTextEditor.document, context);
     }));
 
-    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.toggleCoverage', () => {
-        vscode.window.forceCode.config.showTestCoverage = !vscode.window.forceCode.config.showTestCoverage;
+    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.testCoverage', () => {
+        commands.testCoverage();
         updateDecorations();
     }));
 
