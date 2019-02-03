@@ -28,6 +28,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
             quickpick.push(model.resourceBundle);
             quickpick.push(model.retrievePackage);
             quickpick.push(model.createClass);
+            quickpick.push(model.createLwc);
             quickpick.push(model.runUnitTests);
             quickpick.push(model.deployPackage);
             quickpick.push(model.diff);
@@ -66,6 +67,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
                 case model.diff.description: return commands.diff(vscode.window.activeTextEditor.document, context);
                 case model.package.description: return commands.generator(context);
                 case model.createClass.description: return commands.createClass(context);
+                case model.createLwc.description: return commands.createLwc(context);
                 case model.runUnitTests.description: return commands.apexTest(vscode.window.activeTextEditor.document, context);
                 case model.dx.description: return commands.dx(context);
                 default: break;

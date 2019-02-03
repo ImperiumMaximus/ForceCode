@@ -4,6 +4,7 @@ import apexTest from './apexTest';
 import testCoverage from './coverage';
 import compile from './compile';
 import createClass from './createClass';
+import createLwc from './createLwc';
 import credentials from './credentials';
 import deploy from './deploy';
 import diff from './diff';
@@ -26,6 +27,7 @@ export {
     apexTest,
     compile,
     createClass,
+    createLwc,
     credentials,
     deploy,
     diff,

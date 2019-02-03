@@ -7,7 +7,6 @@ import * as error from '../util/error';
 import diff from './diff';
 // import jsforce = require('jsforce');
 const parseString: any = require('xml2js').parseString;
-
 // TODO: Refactor some things out of this file.  It's getting too big.
 
 var elegantSpinner: any = require('elegant-spinner');
@@ -38,8 +37,10 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
     var DefType: string = undefined;
     var Format: string = undefined;
     var Source: string = undefined;
+    var FilePath: string = undefined;
     var currentObjectDefinition: any = undefined;
     var AuraDefinitionBundleId: string = undefined;
+    var LightningComponentBundleId: string = undefined;
     var Id: string = undefined;
     /* tslint:enable */
     // Start doing stuff
@@ -72,6 +73,20 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                     )
                 )
             ).then(finished, onError);
+    } else if (toolingType === 'LightningComponent') {
+        DefType = getLWCDefTypeFromDocument(document);
+        Format = getLWCFormatFromDocument(document);
+        Source = document.getText();
+        FilePath = document.fileName.substring(document.fileName.lastIndexOf('/src/lwc') + 5);
+
+        return vscode.window.forceCode.connect(context)
+            .then(svc => getLWCBundle(svc)
+            .then(ensureLWCBundle)
+            .then(bundle => getLWCResource(svc, bundle)
+                .then(resources => upsertLWCResource(resources, bundle)
+                )
+            )
+        ).then(finished, onError);
     } else {
         // This process uses the Tooling API to compile special files like Classes, Triggers, Pages, and Components
         if (vscode.window.forceCode.isCompiling) {
@@ -267,6 +282,168 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                 return 'js';
             case 'css':
                 return 'css';
+            default:
+                return 'xml';
+        }
+    }
+
+    // =======================================================================================================================================
+    // ================================                Lightning Web Components                    ===========================================
+    // =======================================================================================================================================
+    function getLWCBundle(svc) {
+        return vscode.window.forceCode.conn.tooling.sobject('LightningComponentBundle').find({
+            'DeveloperName': name, NamespacePrefix: vscode.window.forceCode.config.prefix || ''
+        });
+    }
+    function ensureLWCBundle(results) {
+        // If the Bundle doesn't exist, create it, else Do nothing
+        return new Promise((resolve, reject) => {
+        if (!results[0] || results[0].length === 0) {
+            // Create Lightning Component Bundle
+            return vscode.window.forceCode.conn.tooling.sobject('LightningComponentBundle').create({
+                'FullName': name,
+                'Metadata': {}
+            }).then(bundle => {
+                updateBundle(bundle)
+                .then(bundle => {
+                    results[0] = [bundle];
+                    resolve(results);
+                })
+            });
+        } else {
+            updateBundle(results[0])
+            .then(bundle => {
+                
+                results[0] = bundle;
+                resolve(results)
+            })
+        }
+    })
+
+        function updateBundle(bundle) {
+            return new Promise((resolve, reject) => {
+                if (Format === 'xml') {
+                    let text: string = document.getText();
+
+                    parseString(text, { explicitArray: false, async: false }, function (err, result) {
+                        if (err) {
+                            reject(err);
+                        }
+                        
+                        let md = {}
+                        let targetConfigsXml: string = null;
+
+                        if (result.hasOwnProperty('LightningComponentBundle')) {                        
+                            if (result.LightningComponentBundle.hasOwnProperty('targets')) {
+                                if (!Array.isArray(result.LightningComponentBundle.targets.target)) {
+                                    result.LightningComponentBundle.targets.target = [result.LightningComponentBundle.targets.target]
+                                }
+                                md['targets'] = result.LightningComponentBundle.targets;
+                            } else {
+                                md['targets'] = ""
+                            }
+
+                            if (result.LightningComponentBundle.hasOwnProperty('isExposed')) {
+                                md['isExposed'] = result.LightningComponentBundle.isExposed === 'true'
+                            } else {
+                                md['isExposed'] = false;
+                            }
+
+                            if (result.LightningComponentBundle.hasOwnProperty('isExplicitImport')) {
+                                md['isExplicitImport'] = result.LightningComponentBundle.isExplicitImport === 'true'
+                            } else {
+                                md['isExplicitImport'] = false;
+                            }
+                            
+                            if (result.LightningComponentBundle.hasOwnProperty('apiVersion')) {
+                                md['apiVersion'] = Number(result.LightningComponentBundle.apiVersion)
+                            } else {
+                                md['apiVersion'] = 45.0
+                            }
+                            
+                            if (result.LightningComponentBundle.hasOwnProperty('description')) {
+                                md['description'] = result.LightningComponentBundle.description
+                            } else {
+                                md['description'] = ""
+                            }
+
+                            if (result.LightningComponentBundle.hasOwnProperty('targetConfigs')) {
+                                targetConfigsXml = text.substring(text.indexOf('<targetConfig'),
+                                text.lastIndexOf('</targetConfig>') + '</targetConfig>'.length)
+                                let xmlB64 = Buffer.from(targetConfigsXml).toString('base64')
+
+                                md['targetConfigs'] = xmlB64
+                            } else {
+                                md['targetConfigs'] = Buffer.from("").toString('base64')
+                            }
+
+                        }
+
+                        vscode.window.forceCode.conn.tooling.sobject('LightningComponentBundle').update({ 'Id': bundle.Id, Metadata: md })
+                        .then(res => {
+                           if (res.success) {
+                               resolve(bundle)
+                           } else {
+                               reject(bundle)
+                           }
+                        }).catch(err => {
+                            error.outputError(err, vscode.window.forceCode.outputChannel);
+                            reject(err)
+                        })
+                    });
+                } else {
+                    resolve(bundle)
+                }
+            })
+        }
+    }
+    function getLWCResource(svc, bundle) {
+        return vscode.window.forceCode.conn.tooling.sobject('LightningComponentResource').find({
+            'LightningComponentBundleId': bundle[0].Id
+        });
+    }
+    function upsertLWCResource(resources, bundle) {
+        // If the Resource doesn't exist, create it
+        var res: any[] = resources.filter(result => result.Format === Format && result.FilePath === FilePath);
+        currentObjectDefinition = res.length > 0 ? res[0] : undefined;
+        if (currentObjectDefinition !== undefined) {
+            LightningComponentBundleId = currentObjectDefinition.LightningComponentBundleId;
+            Id = currentObjectDefinition.Id;
+            return vscode.window.forceCode.conn.tooling.sobject('LightningComponentResource').update({ Id: currentObjectDefinition.Id, Source });
+        } else if (bundle[0]) {
+            return vscode.window.forceCode.conn.tooling.sobject('LightningComponentResource').create({ FilePath, LightningComponentBundleId: bundle[0].Id, Format, Source });
+        }
+    }
+    function getLWCDefTypeFromDocument(doc: vscode.TextDocument) {
+        var extension: string = ext.toLowerCase();
+        switch (extension) {
+            case 'html':
+                return 'COMPONENT';
+            case 'js':
+                return 'CONTROLLER';
+            case 'css':
+                return 'STYLE';
+            case 'json':
+                return 'JSON';
+            case 'svg':
+                return 'SVG';
+            case 'xml':
+                return 'XML';
+        }
+    }
+    function getLWCFormatFromDocument(doc: vscode.TextDocument) {
+        // is 'js', 'css', or 'xml'
+        switch (ext) {
+            case 'js':
+                return 'js';
+            case 'css':
+                return 'css';
+            case 'html':
+                return 'html';
+            case 'json':
+                return 'json';
+            case 'svg':
+                return 'svg';
             default:
                 return 'xml';
         }

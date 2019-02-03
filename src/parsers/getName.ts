@@ -6,6 +6,8 @@ export default function getName(document: vscode.TextDocument, toolingType: stri
         return getNameFromClassBody(document);
     } else if (toolingType === 'AuraDefinition') {
       return getAuraNameFromFileName(document.fileName);
+    } else if (toolingType === 'LightningComponent') {
+      return getLWCNameFromFileName(document.fileName);
     }
     return getFileName(document);
 }
@@ -36,4 +38,8 @@ function getNameFromClassBody(document: vscode.TextDocument): string {
 }
 export function getAuraNameFromFileName(fileName: string): string {
     return fileName.split(`${vscode.window.forceCode.config.src}${path.sep}aura${path.sep}`).pop().split(path.sep).shift();
+}
+
+export function getLWCNameFromFileName(fileName: string): string {
+    return fileName.split(`${vscode.window.forceCode.config.src}${path.sep}lwc${path.sep}`).pop().split(path.sep).shift();
 }

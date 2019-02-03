@@ -70,6 +70,12 @@ export default {
         icon: 'plus',
         label: 'Create Class',
     },
+    createLwc: {
+        description: 'Create a Lightning Web Component',
+        detail: 'Creates a dummy Lightning Web Component',  
+        icon: 'plus',
+        label: 'Create LWC',
+    },
     // Run current Unit tests
     runUnitTests: {
         description: 'Run the Unit Tests for this Test Class',
