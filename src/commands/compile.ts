@@ -705,10 +705,42 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
         } else if (toolingType === 'CustomObject' || toolingType === 'CustomLabels') {
             // Modify this if statement to check if any metadata type
             return metadataError(err);
+        } else if (toolingType === 'LightningComponent') {
+            return lwcError(err)
         } else {
             clearInterval(interval);
             error.outputError(err, vscode.window.forceCode.outputChannel);
         }
+    }
+
+    function lwcError(err): any {
+        var diagnostics: vscode.Diagnostic[] = [];
+        var splitString: string[] = err.message.split('\n');
+        if (splitString.length > 1 && splitString[0] === "Compilation Failure") {
+            var failurePos = splitString[1].match(/\d+,\d+/g)
+            if (failurePos) {
+                var failurePosTokens = failurePos[0].split(",")
+                if (failurePosTokens.length == 2) {
+                    var errorMessage = splitString[1].substring(splitString[1].indexOf('LWC'), splitString[1].lastIndexOf(':'));
+                    var failureLineNumber: number = Number(failurePosTokens[0])
+                    var failureColumnNumber: number = Number(failurePosTokens[1])
+                    var failureRange: vscode.Range = document.lineAt(failureLineNumber - 1).range;
+                    if (failureColumnNumber > 0) {
+                        failureRange = failureRange.with(new vscode.Position((failureLineNumber - 1), failureColumnNumber));
+                    }
+                    diagnostics.push(new vscode.Diagnostic(failureRange, errorMessage, 0));
+                    vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
+                }
+            }
+
+            error.outputError({ message: err.message }, vscode.window.forceCode.outputChannel);
+        } else {
+            var failureRange: vscode.Range = document.lineAt(0).range;
+            diagnostics.push(new vscode.Diagnostic(failureRange, err.message.substring(0, err.message.lastIndexOf(':')), 0));
+            vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
+        }
+
+        return false;
     }
 
     function toolingError(err) {
