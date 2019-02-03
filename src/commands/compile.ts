@@ -732,13 +732,13 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                     vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
                 }
             }
-
-            error.outputError({ message: err.message }, vscode.window.forceCode.outputChannel);
         } else {
             var failureRange: vscode.Range = document.lineAt(0).range;
             diagnostics.push(new vscode.Diagnostic(failureRange, err.message.substring(0, err.message.lastIndexOf(':')), 0));
             vscode.window.forceCode.diagnosticCollection.set(document.uri, diagnostics);
         }
+
+        error.outputError({ message: err.message }, vscode.window.forceCode.outputChannel);
 
         return false;
     }
