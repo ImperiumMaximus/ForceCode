@@ -5,8 +5,20 @@ import * as error from '../util/error';
 const PROVIDER: string = 'forcecode://salesforce.com';
 
 export default function diff(document: vscode.TextDocument, context: vscode.ExtensionContext) {
+    var uri = PROVIDER + '/';
     const toolingType: string = parsers.getToolingType(document);
     const fileName: string = parsers.getWholeFileName(document);
+    var componentName: string = null;
+
+    uri += toolingType + '/';
+
+    if (toolingType === 'AuraDefinition' || toolingType === 'LightningComponent') {
+        componentName = parsers.getComponentName(document)
+        uri += componentName + '/';
+    }
+
+    uri += fileName;
+    
     // vscode.window.forceCode.statusBarItem.text = 'ForceCode: Diffing';
     return vscode.window.forceCode.connect(context)
         .then(diffFile)
@@ -19,8 +31,8 @@ export default function diff(document: vscode.TextDocument, context: vscode.Exte
         return command;
     }
 
-    function buildSalesforceUriFromLocalUri(uri: vscode.Uri): vscode.Uri {
-        var sfuri: vscode.Uri = vscode.Uri.parse(`${PROVIDER}/${toolingType}/${fileName}?${Date.now()}`);
+    function buildSalesforceUriFromLocalUri(foo: vscode.Uri): vscode.Uri {
+        var sfuri: vscode.Uri = vscode.Uri.parse(`${uri}?${Date.now()}`);
         return sfuri;
     }
     // =======================================================================================================================================

@@ -60,7 +60,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             .reject({ message: 'Metadata Describe Error. Please try again.' })
             .catch(onError);
     } else if (toolingType === 'AuraDefinition') {
-        DefType = getAuraDefTypeFromDocument(document);
+        DefType = parsers.getAuraDefTypeFromDocument(document);
         Format = getAuraFormatFromDocument(document);
         Source = document.getText();
         // Aura Bundles are a special case, since they can be upserted with the Tooling API
@@ -228,7 +228,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             return vscode.window.forceCode.conn.tooling.sobject('AuraDefinition').create({ AuraDefinitionBundleId: bundle[0].Id, DefType, Format, Source });
         }
     }
-    function getAuraDefTypeFromDocument(doc: vscode.TextDocument) {
+    /*function getAuraDefTypeFromDocument(doc: vscode.TextDocument) {
         var extension: string = ext.toLowerCase();
         switch (extension) {
             case 'app':
@@ -274,7 +274,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
         // PROVIDER — reserved for future use
         // TESTSUITE — reserved for future use
         // MODEL — deprecated, do not use
-    }
+    }*/
     function getAuraFormatFromDocument(doc: vscode.TextDocument) {
         // is 'js', 'css', or 'xml'
         switch (ext) {

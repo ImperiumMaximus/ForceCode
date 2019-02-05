@@ -19,7 +19,11 @@ export function getIcon(toolingType: string) {
     }
 }
 export function getFileExtension(document: vscode.TextDocument) {
-    var ext: string = document.fileName.substring(document.fileName.lastIndexOf('.') + 1, document.fileName.length);
+    return getFileExtensionFromFilename(document.fileName);
+}
+
+export function getFileExtensionFromFilename(fileName: string) {
+    var ext: string = fileName.substring(fileName.lastIndexOf('.') + 1, fileName.length);
     return ext;
 }
 export function getExtension(toolingType: string) {
