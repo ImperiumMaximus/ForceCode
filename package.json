@@ -286,6 +286,27 @@
           "group": "ForceCode"
         }
       ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "package-explorer",
+          "title": "Package Explorer",
+          "icon": "images/dep.svg"
+        }
+      ]
+    },
+    "views": {
+      "package-explorer": [
+        {
+          "id": "remoteMetadata",
+          "name": "Remote"
+        },
+        {
+          "id": "localMetadata",
+          "name": "Local"
+        }
+      ]
     }
   },
   "scripts": {
