@@ -321,6 +321,7 @@
     "reverse-string": "0.0.6",
     "sequin": "^0.1.1",
     "typescript": "^2.9.2",
+    "vsce": "^1.55.0",
     "vscode": "^1.1.18",
     "xml2js": "^0.4.19",
     "zip": "^1.2.0"
