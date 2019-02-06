@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
+import { getFileExtension, getFileExtensionFromFilename } from './open';
+import { getToolingType } from '.';
 
 export default function getName(document: vscode.TextDocument, toolingType: string): string {
     if (toolingType === 'ApexClass') {
@@ -12,7 +14,10 @@ export default function getName(document: vscode.TextDocument, toolingType: stri
     return getFileName(document);
 }
 export function getFileName(document: vscode.TextDocument) {
-    var fileName: string = document.fileName.substring(0, document.fileName.lastIndexOf('.'));
+   return getFileName2(document.fileName);
+}
+export function getFileName2(fn: string) {
+    var fileName: string = fn.substring(0, fn.lastIndexOf('.'));
     var fileNameArray: string[] = fileName.split(path.sep);
     // give me the last one, giving me just the fileName
     fileName = fileNameArray[fileNameArray.length - 1];
@@ -42,4 +47,65 @@ export function getAuraNameFromFileName(fileName: string): string {
 
 export function getLWCNameFromFileName(fileName: string): string {
     return fileName.split(`${vscode.window.forceCode.config.src}${path.sep}lwc${path.sep}`).pop().split(path.sep).shift();
+}
+
+export function getComponentName(document: vscode.TextDocument) {
+    var fileNameArray: string[] = document.fileName.split(path.sep);
+    // give me the last one, giving me just the fileName
+    var fileName: string = fileNameArray[fileNameArray.length - 2];
+    return fileName;
+}
+
+export function getAuraDefTypeFromFilename(fileName: string) {
+    const extension: string = getFileExtensionFromFilename(fileName);
+    const fn: string = getFileName2(fileName);
+    const name: string = getAuraNameFromFileName(fileName);
+    switch (extension) {
+        case 'app':
+            // APPLICATION — Lightning Components app
+            return 'APPLICATION';
+        case 'cmp':
+            // COMPONENT — component markup
+            return 'COMPONENT';
+        case 'auradoc':
+            // DOCUMENTATION — documentation markup
+            return 'DOCUMENTATION';
+        case 'css':
+            // STYLE — style (CSS) resource
+            return 'STYLE';
+        case 'evt':
+            // EVENT — event definition
+            return 'EVENT';
+        case 'design':
+            // DESIGN — design definition
+            return 'DESIGN';
+        case 'svg':
+            // SVG — SVG graphic resource
+            return 'SVG';
+        case 'js':
+            var fileNameEndsWith: string = fn.replace(name, '').toLowerCase();
+            if (fileNameEndsWith === 'controller') {
+                // CONTROLLER — client-side controller
+                return 'CONTROLLER';
+            } else if (fileNameEndsWith === 'helper') {
+                // HELPER — client-side helper
+                return 'HELPER';
+            } else if (fileNameEndsWith === 'renderer') {
+                // RENDERER — client-side renderer
+                return 'RENDERER';
+            };
+            break;
+        default:
+            throw `Unknown extension: ${extension} .`;
+    }
+    // Yet to be implemented
+    // INTERFACE — interface definition
+    // TOKENS — tokens collection
+    // PROVIDER — reserved for future use
+    // TESTSUITE — reserved for future use
+    // MODEL — deprecated, do not use
+}
+
+export function getAuraDefTypeFromDocument(doc: vscode.TextDocument) {
+    return getAuraDefTypeFromFilename(doc.fileName)
 }
