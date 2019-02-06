@@ -9,6 +9,9 @@ export default function createLwc(context: vscode.ExtensionContext) {
     // Here is replaceSrc possiblity
     return configuration().then(config => {
       lwcsPath = `${vscode.window.forceCode.workspaceRoot}${path.sep}lwc`;
+      if (!fs.existsSync(lwcsPath)) {
+        fs.mkdirSync(lwcsPath)
+      }
       if (fs.statSync(lwcsPath).isDirectory()) {
         return userFileNameSelection().then(lwcname => {
           return generateFiles(lwcname, config)
@@ -35,6 +38,7 @@ export default function createLwc(context: vscode.ExtensionContext) {
               if (lwcname.indexOf(' ') > -1) {
                 lwcname = lwcname.replace(' ', '');
               }
+              lwcname = lwcname.charAt(0).toLowerCase() + lwcname.slice(1)
               return lwcname;
           }
           return undefined;
