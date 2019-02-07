@@ -9,6 +9,7 @@ import * as commands from '../commands';
 //import * as jsforce from 'jsforce';
 import { SuccessResult, ErrorResult, RecordResult, ConnectionOptions, ListMetadataQuery, FileProperties, UserInfo } from 'jsforce';
 import { resolve } from 'dns';
+import { processCredentialsAction, generateConfigFile, ADDPICKITEM } from '../commands/credentials';
 const jsforce: any = require('jsforce');
 const pjson: any = require('./../../../package.json');
 
@@ -134,7 +135,9 @@ export default class ForceService implements forceCode.IForceService {
     // Setup username and outputChannel
     self.username = (self.config && self.config.username) || '';
     if (!self.config || !self.config.username) {
-      return commands.credentials().then(config => {
+      return processCredentialsAction(ADDPICKITEM)
+      .then(config => generateConfigFile(config))
+      .then(config => {
         return Object.assign(self.config, config);
       });
     }

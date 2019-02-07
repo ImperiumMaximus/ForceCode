@@ -12,6 +12,8 @@ import SoqlCompletionProvider from './providers/SoqlCompletion';
 export function activate(context: vscode.ExtensionContext): any {
     vscode.window.forceCode = new ForceService();
 
+    console.log(require.resolve('jsforce', {paths: [__dirname, '..']}));
+
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('forcecode', new ForceCodeContentProvider()));
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('sflog', new ForceCodeLogProvider()));
 

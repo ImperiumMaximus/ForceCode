@@ -7,11 +7,11 @@ export default {
         label: 'Salesforce DX',
     },
     // Enter Salesforce Credentials
-    enterCredentials : {
-        description: 'Enter the credentials you wish to use.',
-        detail: 'If you are already logged in, you will be logged out of your previous session.',
+    manageCredentials : {
+        description: 'Manage credentials and switch between orgs.',
+        detail: 'You can either add, modify, delete or switch to an org.',
         icon: 'key',
-        label: 'Enter Credentials',
+        label: 'Manage Credentials',
     },
     // Execute Anonymous 
     // Execute Selected Code

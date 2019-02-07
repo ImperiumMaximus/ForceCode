@@ -31,7 +31,25 @@ export interface Config {
     src?: string;
     url?: string;
     username?: string;
+    orgs?: Org[];
+    active?: number;
     // workspaceRoot?: string;
+}
+
+export interface Org {
+    apiVersion?: string;
+    autoRefresh?: boolean;
+    deployOptions?: {
+        verbose?: boolean,
+        checkOnly?: boolean
+    };
+    password?: string;
+    prefix?: string;
+    showTestCoverage? : boolean;
+    showTestLog? : boolean;
+    url?: string;
+    username?: string;
+    name?: string;
 }
 
 interface ILocationsNotCovered {
