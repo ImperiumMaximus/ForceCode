@@ -5,6 +5,8 @@ import { IForceService } from '../forceCode';
 import * as forceCode from '../forceCode';
 import * as error from '../util/error';
 import diff from './diff';
+import { configuration } from '../services';
+import { generateConfigFile } from './credentials';
 // import jsforce = require('jsforce');
 const parseString: any = require('xml2js').parseString;
 // TODO: Refactor some things out of this file.  It's getting too big.
@@ -782,4 +784,29 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
     }
 
     // =======================================================================================================================================
+}
+
+export function autoCompile(context: vscode.ExtensionContext): Promise<any> {
+    return new Promise((resolve, reject) => {
+        configuration().then(config => {
+            resolve(getAutoCompile(config)
+            .then(config => generateConfigFile(config)))
+        })
+        .catch(err => reject(err))
+        
+        function getAutoCompile(config: forceCode.Config) {
+            let options: vscode.QuickPickItem[] = [{
+                description: 'Automatically deploy/compile files on save',
+                label: 'Yes',
+            }, {
+                description: 'Deploy/compile code through the ForceCode menu',
+                label: 'No',
+            },
+            ];
+            return vscode.window.showQuickPick(options, { ignoreFocusOut: true }).then((res: vscode.QuickPickItem) => {
+                config.autoCompile = res.label === 'Yes';
+                return config;
+            });
+        }
+    })
 }

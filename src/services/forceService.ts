@@ -9,7 +9,7 @@ import * as commands from '../commands';
 //import * as jsforce from 'jsforce';
 import { SuccessResult, ErrorResult, RecordResult, ConnectionOptions, ListMetadataQuery, FileProperties, UserInfo } from 'jsforce';
 import { resolve } from 'dns';
-import { processCredentialsAction, generateConfigFile, ADDPICKITEM } from '../commands/credentials';
+import { addOrg } from '../commands/credentials';
 const jsforce: any = require('jsforce');
 const pjson: any = require('./../../../package.json');
 
@@ -29,6 +29,7 @@ export default class ForceService implements forceCode.IForceService {
   public username: string;
   public url: string;
   public statusBarItem: vscode.StatusBarItem;
+  public currentOrgStatusBarItem: vscode.StatusBarItem;
   public outputChannel: vscode.OutputChannel;
   public operatingSystem: string;
   public workspaceRoot: string;
@@ -42,6 +43,12 @@ export default class ForceService implements forceCode.IForceService {
     this.outputChannel = vscode.window.createOutputChannel(
       constants.OUTPUT_CHANNEL_NAME
     );
+    this.currentOrgStatusBarItem = vscode.window.createStatusBarItem(
+      vscode.StatusBarAlignment.Left,
+      6
+    )
+    this.currentOrgStatusBarItem.command = 'ForceCode.setActiveOrg';
+    this.currentOrgStatusBarItem.tooltip = 'Set the current Org';
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
       5
@@ -59,11 +66,13 @@ export default class ForceService implements forceCode.IForceService {
           loginUrl: config.url || 'https://login.salesforce.com'
         });
         this.statusBarItem.text = `ForceCode ${pjson.version} is Active`;
+        this.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
       })
       .catch(err => {
         this.statusBarItem.text = 'ForceCode: Missing Configuration';
       });
     this.statusBarItem.show();
+    this.currentOrgStatusBarItem.show();
     this.diagnosticCollection = vscode.languages.createDiagnosticCollection('ForceCode-' + newGuid());
   }
   public connect(): Promise<forceCode.IForceService> {
@@ -133,10 +142,9 @@ export default class ForceService implements forceCode.IForceService {
   private setupConfig(): Promise<forceCode.Config> {
     var self: forceCode.IForceService = vscode.window.forceCode;
     // Setup username and outputChannel
-    self.username = (self.config && self.config.username) || '';
+    //self.username = (self.config && self.config.username) || '';
     if (!self.config || !self.config.username) {
-      return processCredentialsAction(ADDPICKITEM)
-      .then(config => generateConfigFile(config))
+      addOrg(self.config)
       .then(config => {
         return Object.assign(self.config, config);
       });

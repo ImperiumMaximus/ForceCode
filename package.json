@@ -36,6 +36,11 @@
         "description": "Run ForceCode Commands"
       },
       {
+        "command": "ForceCode.setActiveOrg",
+        "title": "Force: Set Active Org",
+        "description": "Set the current Org to which operations are performed"
+      },
+      {
         "command": "ForceCode.apexTest",
         "title": "Force: Test",
         "description": "Run Apex unit tests"

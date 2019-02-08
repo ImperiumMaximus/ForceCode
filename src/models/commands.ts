@@ -28,6 +28,12 @@ export default {
         icon: 'rocket',
         label: 'Compile/Deploy',
     },
+    autoCompile: {
+        description: "Enable / Disable deploy on save",
+        detail: 'Change the deploy method of metadata when is saved in the IDE',
+        icon: 'cloud-upload',
+        label: "Auto Deploy",
+    },
     // Export Package (Deploy via Metadata API, using Package.xml)
     deployPackage: {
         description: 'Deploy your package.',

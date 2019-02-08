@@ -25,6 +25,10 @@ export function activate(context: vscode.ExtensionContext): any {
         commands.showMenu(context);
     }));
 
+    context.subscriptions.push(vscode.commands.registerCommand('ForceCode.setActiveOrg', () => {
+        commands.setActive();
+    }));
+
     context.subscriptions.push(vscode.commands.registerCommand('ForceCode.executeAnonymous', () => {
         commands.executeAnonymous(vscode.window.activeTextEditor.document, context);
     }));

@@ -5,7 +5,6 @@ import { getIcon } from '../parsers';
 import * as error from '../util/error';
 import { configuration } from '../services';
 import { Config, Org } from '../forceCode';
-import { copyFile } from 'fs-extra';
 
 const quickPickOptions: vscode.QuickPickOptions = {
     ignoreFocusOut: true
@@ -33,10 +32,12 @@ export const SETACTIVEPICKITEM: vscode.QuickPickItem = {
 
 export default function manageCredentials() {
     vscode.window.forceCode.statusBarItem.text = 'ForceCode: Show Menu';
-    return getAction()
-        .then(action => processCredentialsAction(action))
-        .then(cfg => generateConfigFile(cfg))
-     //   .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));
+    return configuration().then(config => { 
+        getAction()
+        .then(action => processCredentialsAction(action, config))
+        .then(config => generateConfigFile(config))
+    })
+    .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));
     /*return getUsername()
         .then(cfg => getPassword(cfg))
         .then(cfg => getUrl(cfg))
@@ -48,54 +49,69 @@ export default function manageCredentials() {
     // =======================================================================================================================================
 }
 
-export function processCredentialsAction(action: vscode.QuickPickItem): Promise<Config> {
+export function setActive() {
+    vscode.window.forceCode.statusBarItem.text = 'ForceCode: Show Menu';
+    return configuration().then(config => { 
+        processCredentialsAction(SETACTIVEPICKITEM, config)
+        .then(config => generateConfigFile(config))
+    })
+    .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));
+}
+
+export function addOrg(config: Config) {
+    vscode.window.forceCode.statusBarItem.text = 'ForceCode: Show Menu';
+    return new Promise((resolve, reject) => {
+        processCredentialsAction(ADDPICKITEM, config)
+        .then(config => resolve(generateConfigFile(config)))
+        .catch(err => {
+            error.outputError(err, vscode.window.forceCode.outputChannel); 
+            reject(err)}
+        )
+    })
+}
+
+function processCredentialsAction(action: vscode.QuickPickItem, config: Config): Promise<Config> {
     return new Promise(function (resolve, reject) {
         let index: number;
         if (action === undefined) {
-            resolve({})
+            resolve(config)
         } else if (action.label === '$(plus) Add new org') {
-            configuration().then(config => {
-                resolve(getName()
+            resolve(getName()
                 .then(org => getUsername(org))
                 .then(org => getPassword(org))
                 .then(org => getUrl(org))
-   //             .then(org => getAutoCompile(org))
                 .then(org => setOrg(org, config))
                 .then(config => {
                     if (config.orgs.length === 1)
                         return setActiveOrg(0, config)
                     return config;
                 }))
-            })
-            
         } else if (action.label === '$(pencil) Edit existing org') {
-            configuration().then(config => {
-                getOrgIndex(config).then(index => {
-                    resolve(getName(index, config)
-                    .then(org => getUsername(org))
-                    .then(org => getPassword(org))
-                    .then(org => getUrl(org))
-      //              .then(org => getAutoCompile(org))
-                    .then(org => setOrg(org, config, index))
-                    .then(config => {
-                        if (config.active === index)
-                            return setActiveOrg(index, config)
-                        return config;
-                    }))
-                })
+            getOrgIndex(config).then(index => {
+                resolve(getName(index, config)
+                .then(org => getUsername(org))
+                .then(org => getPassword(org))
+                .then(org => getUrl(org))
+                .then(org => setOrg(org, config, index))
+                .then(config => {
+                    if (config.active === index)
+                        return setActiveOrg(index, config)
+                    return config;
+                }))
             })
         } else if (action.label === '$(trashcan) Remove existing org') {
-            configuration()
-                .then(config => {
-                    getOrgIndex(config)
-                    .then(index => resolve(removeOrg(index, config)))
+            getOrgIndex(config)
+                .then(index => {
+                    var cfg = removeOrg(index, config)
+                    if (index === cfg.active && cfg.orgs.length > 0) {
+                        cfg = setActiveOrg(0, cfg)
+                    }
+                    resolve (cfg)
                 })
+        
         } else if (action.label === '$(plug) Set active org') {
-            configuration()
-                .then(config => {
-                    getOrgIndex(config)
-                    .then(index => resolve(setActiveOrg(index, config)))
-            })
+            getOrgIndex(config)
+                .then(index => resolve(setActiveOrg(index, config)))
         }
     })
 }
@@ -111,10 +127,10 @@ function getAction(): Thenable<vscode.QuickPickItem> {
 }
 
 function getOrgIndex(config: Config) {
-    let options: vscode.QuickPickItem[] = config.orgs.map(org => {
+    let options: vscode.QuickPickItem[] = config.orgs.map((org, index) => {
         return {
             description: org.url === 'https://test.salesforce.com' ? 'Sandbox / Test' : 'Production / Developer',
-            label: org.name 
+            label: (index === config.active ? '$(check) ' : '') + org.name
         }
     })
     return vscode.window.showQuickPick(options, quickPickOptions).then(opt => {
@@ -150,14 +166,16 @@ function setActiveOrg(index: number, config: Config) {
         config.password = org.password;
         config.url = org.url;
         config.prefix = org.prefix;
-        config.active = index;
+        config.active = index
+        config.apiVersion = org.apiVersion;
+        vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
     }
     return config;
 }
 
 function getName(index?: number, config?: Config) {
     return new Promise(function (resolve, reject) {
-        let org: Org = Object.assign({}, index >= 0 && config.orgs && config.orgs.length > index ? config.orgs[index]: {})
+        let org: Org = Object.assign({}, index >= 0 && config.orgs && config.orgs.length > index ? config.orgs[index] : { apiVersion: "44.0" })
         let options: vscode.InputBoxOptions = {
             ignoreFocusOut: true,
             placeHolder: 'org name',
@@ -227,7 +245,7 @@ function getUrl(org) {
         return org;
     });
 }
-function getAutoCompile(org) {
+/*function getAutoCompile(org) {
     let options: vscode.QuickPickItem[] = [{
         description: 'Automatically deploy/compile files on save',
         label: 'Yes',
@@ -240,7 +258,7 @@ function getAutoCompile(org) {
         org.autoCompile = res.label === 'Yes';
         return org;
     });
-}
+}*/
 
 // =======================================================================================================================================
 // =======================================================================================================================================
@@ -259,6 +277,7 @@ export function generateConfigFile(config) {
             'verbose': false,
             'ignoreWarnings': true,
         },
+        autoCompile: config.autoCompile || true
     };
     fs.outputFile(vscode.workspace.rootPath + path.sep + 'force.json', JSON.stringify(Object.assign(defaultOptions, config), undefined, 4));
     return config;

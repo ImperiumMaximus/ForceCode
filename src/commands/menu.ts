@@ -31,6 +31,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
             quickpick.push(model.createLwc);
             quickpick.push(model.runUnitTests);
             quickpick.push(model.deployPackage);
+            quickpick.push(model.autoCompile)
             quickpick.push(model.diff);
             quickpick.push(model.package);
             quickpick.push(model.soql);
@@ -64,6 +65,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
                 case model.soql.description: return commands.soql(context);
                 case model.toql.description: return commands.toql(context);
                 case model.deployPackage.description: return commands.deploy(context);
+                case model.autoCompile.description: return commands.autoCompile(context);
                 case model.diff.description: return commands.diff(vscode.window.activeTextEditor.document, context);
                 case model.package.description: return commands.generator(context);
                 case model.createClass.description: return commands.createClass(context);
