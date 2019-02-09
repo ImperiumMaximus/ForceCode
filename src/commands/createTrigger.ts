@@ -2,13 +2,14 @@ import * as vscode from 'vscode';
 import fs = require('fs-extra');
 import path = require('path');
 
-export default function createClass(context: vscode.ExtensionContext) {
-    var classesPath: string;
+export default function createTrigger(context: vscode.ExtensionContext) {
+    var triggersPath: string;
     // Here is replaceSrc possiblity
-    classesPath = `${vscode.window.forceCode.workspaceRoot}${path.sep}classes`;
-    if (fs.statSync(classesPath).isDirectory()) {
-        return userFileNameSelection()
-        .then(filename => generateFile(filename))
+    triggersPath = `${vscode.window.forceCode.workspaceRoot}${path.sep}triggers`;
+    if (fs.statSync(triggersPath).isDirectory()) {
+        return selectObject()
+        .then(opt => userFileNameSelection(opt))
+        .then(triggerData => generateFile(triggerData))
         .then(res => {
             let fp: string = res[0].toString();
             return vscode.workspace.openTextDocument(fp).then(document => {
@@ -19,50 +20,66 @@ export default function createClass(context: vscode.ExtensionContext) {
             vscode.window.forceCode.statusBarItem.text = 'ForceCode: Aborted by user';
         })
     } else {
-        throw { message: classesPath + ' is not a real folder. Check the src option in your config file.' };
+        throw { message: triggersPath + ' is not a real folder. Check the src option in your config file.' };
     }
 
-    function userFileNameSelection() {
+    async function selectObject() {
+      let allResults = await vscode.window.forceCode.conn.soap._invoke('describeGlobal', {})
+      let options: vscode.QuickPickItem[] = allResults.sobjects.filter(sobject => sobject.triggerable === 'true').map(sobject => {
+        return {
+          label: sobject.name,
+          description: sobject.label
+        }
+      })
+      let config: {} = {
+        matchOnDescription: true,
+        placeHolder: 'Select an Object',
+      };
+      return vscode.window.showQuickPick(options, config);
+    }
+
+    function userFileNameSelection(opt) {
         return new Promise((resolve, reject) => { 
             let options: vscode.InputBoxOptions = {
-                placeHolder: 'Base name',
-                prompt: `Enter the class name.`,
+                value: `On${opt.label}`,
+                placeHolder: 'Trigger name',
+                prompt: `Enter the trigger name.`,
             };
-            return vscode.window.showInputBox(options).then(classname => {
-                if (classname) {
-                    classname = classname.trim();
-                    if (classname.endsWith('.cls')) {
-                        classname = classname.substring(0, classname.lastIndexOf('.cls'));
+            return vscode.window.showInputBox(options).then(triggername => {
+                if (triggername) {
+                  triggername = triggername.trim();
+                    if (triggername.endsWith('.trigger')) {
+                      triggername = triggername.substring(0, triggername.lastIndexOf('.trigger'));
                     }
-                    resolve(classname);
+                    resolve({opt: opt, name: triggername});
                 }
                 reject(undefined);
             });
         });
     }
 
-    function generateFile(classname) {
+    function generateFile(triggerData) {
         return Promise.all([writeFile(), writeMetaFile()]);
         function writeFile() {
             return new Promise(function (resolve, reject) {
                 // Write Class file
-                var finalClassName: string = classesPath + path.sep + classname + '.cls';
-                fs.stat(finalClassName, function (err, stats) {
+                var finalTriggerName: string = triggersPath + path.sep + triggerData.name + '.trigger';
+                fs.stat(finalTriggerName, function (err, stats) {
                     if (!err) {
                         vscode.window.forceCode.statusBarItem.text = 'ForceCode: Error creating file';
-                        vscode.window.showErrorMessage('Cannot create ' + finalClassName + '. A file with that name already exists!');
+                        vscode.window.showErrorMessage('Cannot create ' + finalTriggerName + '. A file with that name already exists!');
                     } else if (err.code === 'ENOENT') {
-                        var classFile: string = `public with sharing class ${classname} {
+                        var triggerFile: string = `trigger ${triggerData.name} on ${triggerData.opt.label} (before insert, after insert, before update, after update) {
 
 }`;
-                        fs.outputFile(finalClassName, classFile, function (writeErr) {
+                        fs.outputFile(finalTriggerName, triggerFile, function (writeErr) {
                             if (writeErr) {
                                 vscode.window.forceCode.statusBarItem.text = 'ForceCode: ' + writeErr.message;
                                 vscode.window.showErrorMessage(writeErr.message);
                                 reject(writeErr);
                             } else {
-                                vscode.window.forceCode.statusBarItem.text = 'ForceCode: ' + classname + ' was sucessfully created $(check)';
-                                resolve(finalClassName);
+                                vscode.window.forceCode.statusBarItem.text = 'ForceCode: ' + triggerData.name + ' was sucessfully created $(check)';
+                                resolve(finalTriggerName);
                             }
                         });
                     } else {
@@ -75,7 +92,7 @@ export default function createClass(context: vscode.ExtensionContext) {
         }
         // Write Metadata file
         function writeMetaFile() {
-            var finalMetadataName: string = classesPath + path.sep + classname + '.cls-meta.xml';
+            var finalMetadataName: string = triggersPath + path.sep + triggerData.name + '.trigger-meta.xml';
             return new Promise(function (resolve, reject) {
                 fs.stat(finalMetadataName, function (err, stats) {
                     if (!err) {
@@ -84,10 +101,10 @@ export default function createClass(context: vscode.ExtensionContext) {
                     } else if (err.code === 'ENOENT') {
 
                         var metaFile: string = `<?xml version="1.0" encoding="UTF-8"?>
-<ApexClass xmlns="http://soap.sforce.com/2006/04/metadata">
+<ApexTrigger xmlns="http://soap.sforce.com/2006/04/metadata">
     <apiVersion>${vscode.window.forceCode.version || vscode.window.forceCode.conn.version || '37.0'}</apiVersion>
     <status>Active</status>
-</ApexClass>`;
+</ApexTrigger>`;
 
                         fs.outputFile(finalMetadataName, metaFile, function (writeError) {
                             if (writeError) {

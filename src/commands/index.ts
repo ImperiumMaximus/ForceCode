@@ -3,8 +3,9 @@ import PeekFileDefinitionProvider from './lens';
 import apexTest from './apexTest';
 import testCoverage from './coverage';
 import compile from './compile';
-import createClass from './createClass';
-import createLwc from './createLwc';
+import create from './create';
+/*import createClass from './createClass';
+import createLwc from './createLwc';*/
 import credentials from './credentials';
 import deploy from './deploy';
 import diff from './diff';
@@ -30,8 +31,7 @@ export {
     compile,
     autoCompile,
     setActive,
-    createClass,
-    createLwc,
+    create,
     credentials,
     deploy,
     diff,
