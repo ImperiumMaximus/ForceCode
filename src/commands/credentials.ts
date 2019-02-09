@@ -5,6 +5,9 @@ import { getIcon } from '../parsers';
 import * as error from '../util/error';
 import { configuration } from '../services';
 import { Config, Org } from '../forceCode';
+import { UserInfo, ConnectionOptions } from 'jsforce';
+const jsforce: any = require('jsforce');
+
 
 const quickPickOptions: vscode.QuickPickOptions = {
     ignoreFocusOut: true
@@ -146,16 +149,32 @@ function removeOrg(index: number, config: Config) {
     return config;
 }
 
-function setOrg(org: Org, config: Config, index?: number) {
-    if (index === undefined) {
-        if (!config.orgs) {
-            config.orgs = [];
-        }
-        config.orgs.push(org);
-    } else if (index >= 0 && config.orgs && config.orgs.length > index) {
-        config.orgs[index] = org;
-    }
-    return config;
+function setOrg(org: Org, config: Config, index?: number): Promise<Config> {
+    return new Promise((resolve, reject) => {
+        var connectionOptions: ConnectionOptions = {
+            loginUrl: org.url || 'https://login.salesforce.com',
+          };
+          if (config.proxyUrl) {
+            connectionOptions.proxyUrl = config.proxyUrl;
+          }
+        let conn = new jsforce.Connection(connectionOptions)
+        conn.login(org.username, org.password,  (err: Error, res: UserInfo) => {
+            if (err) {
+                reject(err)
+            }
+            org.instanceUrl = conn.instanceUrl;
+            if (index === undefined) {
+                if (!config.orgs) {
+                    config.orgs = [];
+                }
+                config.orgs.push(org);
+            } else if (index >= 0 && config.orgs && config.orgs.length > index) {
+                config.orgs[index] = org;
+            }
+            resolve(config)
+        })
+    })
+    
 
 }
 
@@ -167,7 +186,8 @@ function setActiveOrg(index: number, config: Config) {
         config.url = org.url;
         config.prefix = org.prefix;
         config.active = index
-        config.apiVersion = org.apiVersion;
+        //config.apiVersion = org.apiVersion;
+        config.instanceUrl = org.instanceUrl;
         vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
     }
     return config;
@@ -175,7 +195,7 @@ function setActiveOrg(index: number, config: Config) {
 
 function getName(index?: number, config?: Config) {
     return new Promise(function (resolve, reject) {
-        let org: Org = Object.assign({}, index >= 0 && config.orgs && config.orgs.length > index ? config.orgs[index] : { apiVersion: "44.0" })
+        let org: Org = Object.assign({}, index >= 0 && config.orgs && config.orgs.length > index ? config.orgs[index] : { })
         let options: vscode.InputBoxOptions = {
             ignoreFocusOut: true,
             placeHolder: 'org name',

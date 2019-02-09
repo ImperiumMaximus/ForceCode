@@ -33,11 +33,11 @@ export interface Config {
     username?: string;
     orgs?: Org[];
     active?: number;
+    instanceUrl?: string;
     // workspaceRoot?: string;
 }
 
 export interface Org {
-    apiVersion?: string;
     autoRefresh?: boolean;
     deployOptions?: {
         verbose?: boolean,
@@ -50,6 +50,7 @@ export interface Org {
     url?: string;
     username?: string;
     name?: string;
+    instanceUrl?: string;
 }
 
 interface ILocationsNotCovered {
@@ -156,6 +157,7 @@ export interface IForceService {
     isLoggedIn?: boolean;
     username?: string;
     url?: string;
+    version?: string;
     outputChannel: vscode.OutputChannel;
     statusBarItem: vscode.StatusBarItem;
     currentOrgStatusBarItem: vscode.StatusBarItem;

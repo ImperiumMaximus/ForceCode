@@ -203,7 +203,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             return vscode.window.forceCode.conn.tooling.sobject('AuraDefinitionBundle').create({
                 'DeveloperName': name,
                 'MasterLabel': name,
-                'ApiVersion': vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version || '37.0',
+                'ApiVersion': vscode.window.forceCode.version || vscode.window.forceCode.conn.version || '37.0',
                 'Description': name.replace('_', ' '),
             }).then(bundle => {
                 results[0] = [bundle];
