@@ -94,7 +94,6 @@ function processCredentialsAction(action: vscode.QuickPickItem, config: Config):
             .then(sel => getPassword(sel))
             .then(sel => getUrl(sel))
             .then(sel => setOrg(sel, config))
-            .catch(err => { return Promise.reject(err); })
     } else if (action.label === '$(trashcan) Remove existing org') {
         return selectOrg(config)
             .then(sel => confirmRemoval(sel))
