@@ -309,7 +309,6 @@ export function generateConfigFile(config) {
         pollTimeout: 1200,
         debugOnly: true,
         debugFilter: 'USER_DEBUG|FATAL_ERROR',
-        apiVersion: '45.0',
         deployOptions: {
             'checkOnly': false,
             'testLevel': 'runLocalTests',
