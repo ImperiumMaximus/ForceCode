@@ -10,6 +10,7 @@ import { generateConfigFile } from './credentials';
 // import jsforce = require('jsforce');
 const parseString: any = require('xml2js').parseString;
 // TODO: Refactor some things out of this file.  It's getting too big.
+import fs = require('fs');
 
 var elegantSpinner: any = require('elegant-spinner');
 const UPDATE: boolean = true;
@@ -547,10 +548,25 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
 
         }
         function addMember(records) {
+            let md = {}
+            
+            if (fs.existsSync(`${document.fileName}-meta.xml`)) {
+                var xmlMeta: string = fs.readFileSync(`${document.fileName}-meta.xml`, 'utf-8')
+                parseString(xmlMeta, { explicitArray: false, async: false }, function (err, result) {
+                    if (result.hasOwnProperty(toolingType)) {
+                        delete result[toolingType]['$'];
+                        delete result[toolingType]['_'];
+                        md = result[toolingType]
+                    }
+                })
+            }
             if (records.length > 0) {
                 // Tooling Object already exists
                 //  UPDATE it
                 var record: MetadataResult = records[0];
+                if (md !== {}) {
+                    record.Metadata = md
+                }
                 // Get the modified date of the local file... 
                 var member: {} = {
                     Body: body,
@@ -574,19 +590,19 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                 // Tooling Object does not exist
                 // so we CREATE it
                 fc.statusBarItem.text = 'Creating ' + name;
-                return fc.conn.tooling.sobject(parsers.getToolingType(document, CREATE)).create(createObject(body)).then(foo => {
+                return fc.conn.tooling.sobject(parsers.getToolingType(document, CREATE)).create(createObject(body, md)).then(foo => {
                     return fc;
                 });
             }
         }
 
-        function createObject(text: string): {} {
+        function createObject(text: string, metadata: {}): {} {
             if (toolingType === 'ApexClass') {
-                return { Body: text };
+                return { Body: text, Metadata: metadata };
             } else if (toolingType === 'ApexTrigger') {
                 let matches: RegExpExecArray = /\btrigger\b\s\w*\s\bon\b\s(\w*)\s\(/.exec(text);
                 if (matches) {
-                    return { Body: text, TableEnumOrId: matches[1] };
+                    return { Body: text, TableEnumOrId: matches[1], Metadata: metadata };
                 } else {
                     throw { message: 'Could not get object name from Trigger' };
                 }
@@ -595,9 +611,10 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                     Markup: text,
                     Masterlabel: name + 'Label',
                     Name: name,
+                    Metadata: metadata
                 };
             }
-            return { Body: text };
+            return { Body: text, Metadata: metadata };
         }
     }
     // =======================================================================================================================================
