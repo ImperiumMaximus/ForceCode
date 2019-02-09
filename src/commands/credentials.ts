@@ -97,6 +97,7 @@ function processCredentialsAction(action: vscode.QuickPickItem, config: Config):
             .catch(err => { return Promise.reject(err); })
     } else if (action.label === '$(trashcan) Remove existing org') {
         return selectOrg(config)
+            .then(sel => confirmRemoval(sel))
             .then(sel => removeOrg(sel, config))
     } else if (action.label === '$(plug) Set active org') {
         return selectOrg(config)
@@ -132,6 +133,23 @@ function selectOrg(config: Config): Promise<{}> {
     })
 }
 
+function confirmRemoval(sel) {
+    return new Promise((resolve, reject) => {
+        let options: vscode.QuickPickItem[] = [{
+            description: `Confirm removal of ${sel.org.name}`,
+            label: 'Remove',
+        }, {
+            description: 'Abort removal',
+            label: 'Abort',
+        },
+        ];
+        return vscode.window.showQuickPick(options, quickPickOptions).then((res: vscode.QuickPickItem) => {
+            sel.index = res.label === 'Abort' ? -1 : sel.index
+            resolve(sel)
+        });
+    })
+}
+
 function removeOrg(sel, config: Config) {
     if (sel.index >= 0 && config.orgs && config.orgs.length > sel.index) {
         config.orgs.splice(sel.index, 1)
@@ -146,14 +164,13 @@ function removeOrg(sel, config: Config) {
 }
 
 function setActiveOrg(sel, config: Config) {
-    return new Promise((resolve, reject) => {
-        if (sel.index >= 0 && config.orgs && config.orgs.length > sel.index) {
-            config = Object.assign(config, config.orgs[sel.index])
-            config.active = sel.index;
-        }
-        vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
-        resolve(config)
-    });
+    if (sel.index >= 0 && config.orgs && config.orgs.length > sel.index) {
+        config = Object.assign(config, config.orgs[sel.index])
+        config.active = sel.index;
+    }
+    vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
+
+    return config;
 }
 
 function setOrg(sel, config: Config): Promise<Config> {
