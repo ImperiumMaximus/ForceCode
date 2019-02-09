@@ -37,16 +37,18 @@ export default function manageCredentials() {
     vscode.window.forceCode.statusBarItem.text = 'ForceCode: Show Menu';
     return configuration().then(config => { 
         getAction()
-        .then(action => processCredentialsAction(action, config))
+        .then(action => processCredentialsAction(action, config)
+            .catch(err => {
+                vscode.window.forceCode.statusBarItem.text = `ForceCode: ${err}`;
+                error.outputError(err, vscode.window.forceCode.outputChannel);
+                Promise.reject(err)
+            }))         
         .then(config => generateConfigFile(config))
     })
-    .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));
-    /*return getUsername()
-        .then(cfg => getPassword(cfg))
-        .then(cfg => getUrl(cfg))
-        .then(cfg => getAutoCompile(cfg))
-        .then(cfg => finished(cfg))
-        .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));*/
+    .catch(err => { 
+        vscode.window.forceCode.statusBarItem.text = `ForceCode: ${err}`;
+        error.outputError(err, vscode.window.forceCode.outputChannel);
+    })
     // =======================================================================================================================================
     // =======================================================================================================================================
     // =======================================================================================================================================
@@ -57,6 +59,10 @@ export function setActive() {
     return configuration().then(config => { 
         processCredentialsAction(SETACTIVEPICKITEM, config)
         .then(config => generateConfigFile(config))
+        .catch(err => { 
+            vscode.window.forceCode.statusBarItem.text = `ForceCode: ${err}`;
+            error.outputError(err, vscode.window.forceCode.outputChannel);
+        })
     })
     .catch(err => error.outputError(err, vscode.window.forceCode.outputChannel));
 }
@@ -74,49 +80,28 @@ export function addOrg(config: Config) {
 }
 
 function processCredentialsAction(action: vscode.QuickPickItem, config: Config): Promise<Config> {
-    return new Promise(function (resolve, reject) {
-        let index: number;
-        if (action === undefined) {
-            resolve(config)
-        } else if (action.label === '$(plus) Add new org') {
-            resolve(getName()
-                .then(org => getUsername(org))
-                .then(org => getPassword(org))
-                .then(org => getUrl(org))
-                .then(org => setOrg(org, config))
-                .then(config => {
-                    if (config.orgs.length === 1)
-                        return setActiveOrg(0, config)
-                    return config;
-                }))
-        } else if (action.label === '$(pencil) Edit existing org') {
-            getOrgIndex(config).then(index => {
-                resolve(getName(index, config)
-                .then(org => getUsername(org))
-                .then(org => getPassword(org))
-                .then(org => getUrl(org))
-                .then(org => setOrg(org, config, index))
-                .then(config => {
-                    if (config.active === index)
-                        return setActiveOrg(index, config)
-                    return config;
-                }))
-            })
-        } else if (action.label === '$(trashcan) Remove existing org') {
-            getOrgIndex(config)
-                .then(index => {
-                    var cfg = removeOrg(index, config)
-                    if (index === cfg.active && cfg.orgs.length > 0) {
-                        cfg = setActiveOrg(0, cfg)
-                    }
-                    resolve (cfg)
-                })
-        
-        } else if (action.label === '$(plug) Set active org') {
-            getOrgIndex(config)
-                .then(index => resolve(setActiveOrg(index, config)))
-        }
-    })
+    if (action === undefined) {
+        return Promise.resolve(config)
+    } else if (action.label === '$(plus) Add new org') {
+        return getName()
+            .then(org => getUsername(org))
+            .then(org => getPassword(org))
+            .then(org => getUrl(org))
+            .then(org => setOrg(org, config))
+    } else if (action.label === '$(pencil) Edit existing org') {
+        return selectOrg(config)
+            .then(sel => getName(sel))
+            .then(sel => getPassword(sel))
+            .then(sel => getUrl(sel))
+            .then(sel => setOrg(sel, config))
+            .catch(err => { return Promise.reject(err); })
+    } else if (action.label === '$(trashcan) Remove existing org') {
+        return selectOrg(config)
+            .then(sel => removeOrg(sel, config))
+    } else if (action.label === '$(plug) Set active org') {
+        return selectOrg(config)
+            .then(sel => setActiveOrg(sel, config))
+    }
 }
 
 function getAction(): Thenable<vscode.QuickPickItem> {
@@ -129,48 +114,77 @@ function getAction(): Thenable<vscode.QuickPickItem> {
     return vscode.window.showQuickPick(options, quickPickOptions)
 }
 
-function getOrgIndex(config: Config) {
-    let options: vscode.QuickPickItem[] = config.orgs.map((org, index) => {
-        return {
-            description: org.url === 'https://test.salesforce.com' ? 'Sandbox / Test' : 'Production / Developer',
-            label: (index === config.active ? '$(check) ' : '') + org.name
-        }
-    })
-    return vscode.window.showQuickPick(options, quickPickOptions).then(opt => {
-        return options.indexOf(opt)
+function selectOrg(config: Config): Promise<{}> {
+    return new Promise((resolve, reject) => {
+        let options: vscode.QuickPickItem[] = config.orgs.map((org, index) => {
+            return {
+                description: org.url === 'https://test.salesforce.com' ? 'Sandbox / Test' : 'Production / Developer',
+                label: (index === config.active ? '$(check) ' : '') + org.name
+            }
+        })
+        return vscode.window.showQuickPick(options, quickPickOptions).then(opt => {
+            if (opt === undefined) {
+                reject({})
+            }
+            var index = options.indexOf(opt);
+            return resolve({index: index , org: config.orgs[index]})
+        })
     })
 }
 
-function removeOrg(index: number, config: Config) {
-    if (index >= 0 && config.orgs && config.orgs.length > index) {
-        config.orgs.splice(index, 1)
+function removeOrg(sel, config: Config) {
+    if (sel.index >= 0 && config.orgs && config.orgs.length > sel.index) {
+        config.orgs.splice(sel.index, 1)
+        if (sel.index === config.active && config.orgs.length > 0) {
+            config = Object.assign(config, config.orgs[0])
+            config.active = 0;
+            vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
+        }
     }
 
     return config;
 }
 
-function setOrg(org: Org, config: Config, index?: number): Promise<Config> {
+function setActiveOrg(sel, config: Config) {
+    return new Promise((resolve, reject) => {
+        if (sel.index >= 0 && config.orgs && config.orgs.length > sel.index) {
+            config = Object.assign(config, config.orgs[sel.index])
+            config.active = sel.index;
+        }
+        vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
+        resolve(config)
+    });
+}
+
+function setOrg(sel, config: Config): Promise<Config> {
     return new Promise((resolve, reject) => {
         var connectionOptions: ConnectionOptions = {
-            loginUrl: org.url || 'https://login.salesforce.com',
+            loginUrl: sel.org.url || 'https://login.salesforce.com',
           };
           if (config.proxyUrl) {
             connectionOptions.proxyUrl = config.proxyUrl;
           }
         let conn = new jsforce.Connection(connectionOptions)
-        conn.login(org.username, org.password,  (err: Error, res: UserInfo) => {
+        conn.login(sel.org.username, sel.org.password,  (err: Error, res: UserInfo) => {
             if (err) {
                 reject(err)
             }
-            org.instanceUrl = conn.instanceUrl;
-            if (index === undefined) {
+            sel.org.instanceUrl = conn.instanceUrl;
+            if (sel.index === undefined) {
                 if (!config.orgs) {
                     config.orgs = [];
                 }
-                config.orgs.push(org);
-            } else if (index >= 0 && config.orgs && config.orgs.length > index) {
-                config.orgs[index] = org;
+                if(config.orgs.push(sel.org) === 1) {
+                    config = Object.assign(config, sel.org)
+                    config.active = 0;
+                }
+            } else if (sel.index >= 0 && config.orgs && config.orgs.length > sel.index) {
+                config.orgs[sel.index] = sel.org;
+                if (config.active === sel.index) {
+                    config = Object.assign(config, sel.org)
+                }
             }
+            vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
             resolve(config)
         })
     })
@@ -178,69 +192,58 @@ function setOrg(org: Org, config: Config, index?: number): Promise<Config> {
 
 }
 
-function setActiveOrg(index: number, config: Config) {
-    if (index >= 0 && config.orgs && config.orgs.length > index) {
-        var org: Org = config.orgs[index]
-        config.username = org.username;
-        config.password = org.password;
-        config.url = org.url;
-        config.prefix = org.prefix;
-        config.active = index
-        //config.apiVersion = org.apiVersion;
-        config.instanceUrl = org.instanceUrl;
-        vscode.window.forceCode.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
-    }
-    return config;
-}
 
-function getName(index?: number, config?: Config) {
+function getName(sel?: any) {
     return new Promise(function (resolve, reject) {
-        let org: Org = Object.assign({}, index >= 0 && config.orgs && config.orgs.length > index ? config.orgs[index] : { })
+        if (sel === undefined) {
+            sel = {org: {}}
+        }
+        //let org: Org = Object.assign({}, index >= 0 && config.orgs && config.orgs.length > index ? config.orgs[index] : { })
         let options: vscode.InputBoxOptions = {
             ignoreFocusOut: true,
             placeHolder: 'org name',
-            value: (index >= 0 && config.orgs && config.orgs.length > index) ? config.orgs[index].name : '',
+            value: sel.org.name || '',
             prompt: 'Please enter a SFDC org friendly name',
         };
         vscode.window.showInputBox(options).then(result => {
-            org.name = result || ((index >= 0 && config.orgs && config.orgs.length > index) ? config.orgs[index].name : '');
-            if (!org.name) { reject('No name'); };
-            resolve(org);
+            sel.org.name = result || sel.org.name || '';
+            if (!sel.org.name) { reject('No name'); };
+            resolve(sel);
         });
     });
 }
 
-function getUsername(org) {
+function getUsername(sel) {
     return new Promise(function (resolve, reject) {
         let options: vscode.InputBoxOptions = {
             ignoreFocusOut: true,
             placeHolder: 'mark@salesforce.com',
-            value: org.username || '',
+            value: sel.org.username || '',
             prompt: 'Please enter your SFDC username',
         };
         vscode.window.showInputBox(options).then(result => {
-            org.username = result || org.username || '';
-            if (!org.username) { reject('No Username'); };
-            resolve(org);
+            sel.org.username = result || sel.org.username || '';
+            if (!sel.org.username) { reject('No Username'); };
+            resolve(sel);
         });
     })
 }
 
-function getPassword(org) {
+function getPassword(sel) {
     let options: vscode.InputBoxOptions = {
         ignoreFocusOut: true,
         password: true,
-        value: org.password || '',
+        value: sel.org.password || '',
         placeHolder: 'enter your password and token',
         prompt: 'Please enter your SFDC password and token',
     };
     return vscode.window.showInputBox(options).then(function (result: string) {
-        org.password = result || org.password || '';
-        if (!org.password) { throw 'No Password'; };
-        return org;
+        sel.org.password = result || sel.org.password || '';
+        if (!sel.org.password) { throw 'No Password'; };
+        return sel;
     });
 }
-function getUrl(org) {
+function getUrl(sel) {
     let opts: any = [
         {
             icon: 'code',
@@ -261,8 +264,8 @@ function getUrl(org) {
         };
     });
     return vscode.window.showQuickPick(options, quickPickOptions).then((res: vscode.QuickPickItem) => {
-        org.url = res.description || 'https://login.salesforce.com';
-        return org;
+        sel.org.url = res.description || 'https://login.salesforce.com';
+        return sel;
     });
 }
 /*function getAutoCompile(org) {
