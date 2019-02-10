@@ -17,9 +17,8 @@ export default function getSetConfig(service?: forceCode.IForceService): Promise
 				self.config.src = 'src';
 			}
 			self.workspaceRoot = `${vscode.workspace.rootPath}${path.sep}${self.config.src}`;
-			if (!fs.existsSync(self.workspaceRoot)) {
-				fs.mkdirSync(self.workspaceRoot);
-			}
+			fs.ensureDirSync(self.workspaceRoot)
+			
 			resolve(self.config);
 		} catch (err) {
 			self.config = {};

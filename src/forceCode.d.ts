@@ -31,7 +31,26 @@ export interface Config {
     src?: string;
     url?: string;
     username?: string;
+    orgs?: Org[];
+    active?: number;
+    instanceUrl?: string;
     // workspaceRoot?: string;
+}
+
+export interface Org {
+    autoRefresh?: boolean;
+    deployOptions?: {
+        verbose?: boolean,
+        checkOnly?: boolean
+    };
+    password?: string;
+    prefix?: string;
+    showTestCoverage? : boolean;
+    showTestLog? : boolean;
+    url?: string;
+    username?: string;
+    name?: string;
+    instanceUrl?: string;
 }
 
 interface ILocationsNotCovered {
@@ -138,8 +157,10 @@ export interface IForceService {
     isLoggedIn?: boolean;
     username?: string;
     url?: string;
+    version?: string;
     outputChannel: vscode.OutputChannel;
     statusBarItem: vscode.StatusBarItem;
+    currentOrgStatusBarItem: vscode.StatusBarItem;
     diagnosticCollection: vscode.DiagnosticCollection;
     connect(context: vscode.ExtensionContext): Promise<IForceService>;
     newContainer(force: Boolean): Promise<IForceService>;

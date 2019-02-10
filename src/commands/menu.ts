@@ -19,7 +19,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
     // =======================================================================================================================================
 
     function displayMenu() {
-        var quickpick: any[] = [model.enterCredentials];
+        var quickpick: any[] = [model.manageCredentials];
         if (vscode.window.forceCode.userInfo !== undefined) {
             quickpick.push(model.openFile);
             quickpick.push(model.dx);
@@ -31,6 +31,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
             quickpick.push(model.createLwc);
             quickpick.push(model.runUnitTests);
             quickpick.push(model.deployPackage);
+            quickpick.push(model.autoCompile)
             quickpick.push(model.diff);
             quickpick.push(model.package);
             quickpick.push(model.soql);
@@ -54,7 +55,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
     function processResult(result) {
         if (result !== undefined && result.description !== undefined) {
             switch (result.description) {
-                case model.enterCredentials.description: return commands.credentials();
+                case model.manageCredentials.description: return commands.credentials();
                 case model.compileDeploy.description: return commands.compile(vscode.window.activeTextEditor.document, context);
                 case model.executeAnonymous.description: return commands.executeAnonymous(vscode.window.activeTextEditor.document, context);
                 case model.getLogs.description: return commands.getLog(context);
@@ -64,6 +65,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
                 case model.soql.description: return commands.soql(context);
                 case model.toql.description: return commands.toql(context);
                 case model.deployPackage.description: return commands.deploy(context);
+                case model.autoCompile.description: return commands.autoCompile(context);
                 case model.diff.description: return commands.diff(vscode.window.activeTextEditor.document, context);
                 case model.package.description: return commands.generator(context);
                 case model.createClass.description: return commands.createClass(context);

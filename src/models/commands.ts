@@ -7,11 +7,11 @@ export default {
         label: 'Salesforce DX',
     },
     // Enter Salesforce Credentials
-    enterCredentials : {
-        description: 'Enter the credentials you wish to use.',
-        detail: 'If you are already logged in, you will be logged out of your previous session.',
+    manageCredentials : {
+        description: 'Manage credentials and switch between orgs.',
+        detail: 'You can either add, modify, delete or switch to an org.',
         icon: 'key',
-        label: 'Enter Credentials',
+        label: 'Manage Credentials',
     },
     // Execute Anonymous 
     // Execute Selected Code
@@ -27,6 +27,12 @@ export default {
         detail: 'If there is an error, you will get notified. To automatically compile Salesforce files on save, set the autoCompile flag to true in your settings file',
         icon: 'rocket',
         label: 'Compile/Deploy',
+    },
+    autoCompile: {
+        description: "Enable / Disable deploy on save",
+        detail: 'Change the deploy method of metadata when is saved in the IDE',
+        icon: 'cloud-upload',
+        label: "Auto Deploy",
     },
     // Export Package (Deploy via Metadata API, using Package.xml)
     deployPackage: {

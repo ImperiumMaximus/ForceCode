@@ -9,8 +9,10 @@ import * as commands from '../commands';
 //import * as jsforce from 'jsforce';
 import { SuccessResult, ErrorResult, RecordResult, ConnectionOptions, ListMetadataQuery, FileProperties, UserInfo } from 'jsforce';
 import { resolve } from 'dns';
+import { addOrg } from '../commands/credentials';
 const jsforce: any = require('jsforce');
 const pjson: any = require('./../../../package.json');
+const fetch = require('node-fetch');
 
 export default class ForceService implements forceCode.IForceService {
   public config: forceCode.Config;
@@ -27,7 +29,9 @@ export default class ForceService implements forceCode.IForceService {
   public isLoggedIn: boolean;
   public username: string;
   public url: string;
+  public version: string;
   public statusBarItem: vscode.StatusBarItem;
+  public currentOrgStatusBarItem: vscode.StatusBarItem;
   public outputChannel: vscode.OutputChannel;
   public operatingSystem: string;
   public workspaceRoot: string;
@@ -41,6 +45,12 @@ export default class ForceService implements forceCode.IForceService {
     this.outputChannel = vscode.window.createOutputChannel(
       constants.OUTPUT_CHANNEL_NAME
     );
+    this.currentOrgStatusBarItem = vscode.window.createStatusBarItem(
+      vscode.StatusBarAlignment.Left,
+      6
+    )
+    this.currentOrgStatusBarItem.command = 'ForceCode.setActiveOrg';
+    this.currentOrgStatusBarItem.tooltip = 'Set the current Org';
     this.statusBarItem = vscode.window.createStatusBarItem(
       vscode.StatusBarAlignment.Left,
       5
@@ -58,11 +68,13 @@ export default class ForceService implements forceCode.IForceService {
           loginUrl: config.url || 'https://login.salesforce.com'
         });
         this.statusBarItem.text = `ForceCode ${pjson.version} is Active`;
+        this.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
       })
       .catch(err => {
         this.statusBarItem.text = 'ForceCode: Missing Configuration';
       });
     this.statusBarItem.show();
+    this.currentOrgStatusBarItem.show();
     this.diagnosticCollection = vscode.languages.createDiagnosticCollection('ForceCode-' + newGuid());
   }
   public connect(): Promise<forceCode.IForceService> {
@@ -132,26 +144,39 @@ export default class ForceService implements forceCode.IForceService {
   private setupConfig(): Promise<forceCode.Config> {
     var self: forceCode.IForceService = vscode.window.forceCode;
     // Setup username and outputChannel
-    self.username = (self.config && self.config.username) || '';
+    //self.username = (self.config && self.config.username) || '';
     if (!self.config || !self.config.username) {
-      return commands.credentials().then(config => {
+      addOrg(self.config)
+      .then(config => {
         return Object.assign(self.config, config);
       });
     }
     return configuration();
   }
-  private login(config): Promise<forceCode.IForceService> {
+
+  private async login(config): Promise<forceCode.IForceService> {
+    async function getLatestVersion(instanceUrl: string): Promise<string> {
+      let response = await fetch(`${instanceUrl}/services/data`)
+      let versions = await response.json()
+      return versions.map(v => v.version).sort((a, b) => Number(b) - Number(a))[0];
+    }
+
     var self: forceCode.IForceService = vscode.window.forceCode;
     // Lazy-load the connection
+    self.version = '44.0';
+    if (self.config.instanceUrl) {
+      self.version = await getLatestVersion(self.config.instanceUrl);
+      }
     if (
       self.userInfo === undefined ||
       self.config.username !== self.username ||
       self.config.url !== self.url ||
+      (self.conn && (self.conn.version !== self.version)) ||
       !self.config.password
     ) {
       var connectionOptions: ConnectionOptions = {
         loginUrl: self.config.url || 'https://login.salesforce.com',
-        version: self.config.apiVersion
+        version: self.version
       };
       if (self.config.proxyUrl) {
         connectionOptions.proxyUrl = self.config.proxyUrl;
@@ -160,7 +185,7 @@ export default class ForceService implements forceCode.IForceService {
 
       if (!config.username || !config.password) {
         vscode.window.forceCode.outputChannel.appendLine(
-          'The force.json file seems to not have a username and/or password. Pease insure you have a properly formatted config file, or submit an issue to the repo @ https"//github.com/celador/forcecode/issues '
+          'The force.json file seems to not have a username and/or password. Pease ensure you have a properly formatted config file, or submit an issue to the repo @ https"//github.com/celador/forcecode/issues '
         );
         throw { message: 'ForceCode: $(alert) Missing Credentials $(alert)' };
       }
@@ -194,9 +219,9 @@ export default class ForceService implements forceCode.IForceService {
       function connectionSuccess(userInfo) {
         vscode.window.forceCode.statusBarItem.text = `ForceCode: $(zap) Connected as ${
           self.config.username
-          } $(zap)`;
+          } (on v${self.conn.version}) $(zap)`;
         self.outputChannel.appendLine(
-          `Connected as ${JSON.stringify(userInfo)}`
+          `Connected as ${JSON.stringify(userInfo)} (on v${self.conn.version})`
         );
         self.userInfo = userInfo;
         self.username = config.username;

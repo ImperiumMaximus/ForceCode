@@ -5,9 +5,12 @@ import { IForceService } from '../forceCode';
 import * as forceCode from '../forceCode';
 import * as error from '../util/error';
 import diff from './diff';
+import { configuration } from '../services';
+import { generateConfigFile } from './credentials';
 // import jsforce = require('jsforce');
 const parseString: any = require('xml2js').parseString;
 // TODO: Refactor some things out of this file.  It's getting too big.
+import fs = require('fs');
 
 var elegantSpinner: any = require('elegant-spinner');
 const UPDATE: boolean = true;
@@ -60,7 +63,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             .reject({ message: 'Metadata Describe Error. Please try again.' })
             .catch(onError);
     } else if (toolingType === 'AuraDefinition') {
-        DefType = getAuraDefTypeFromDocument(document);
+        DefType = parsers.getAuraDefTypeFromDocument(document);
         Format = getAuraFormatFromDocument(document);
         Source = document.getText();
         // Aura Bundles are a special case, since they can be upserted with the Tooling API
@@ -201,7 +204,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             return vscode.window.forceCode.conn.tooling.sobject('AuraDefinitionBundle').create({
                 'DeveloperName': name,
                 'MasterLabel': name,
-                'ApiVersion': vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version || '37.0',
+                'ApiVersion': vscode.window.forceCode.version || vscode.window.forceCode.conn.version || '37.0',
                 'Description': name.replace('_', ' '),
             }).then(bundle => {
                 results[0] = [bundle];
@@ -228,7 +231,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             return vscode.window.forceCode.conn.tooling.sobject('AuraDefinition').create({ AuraDefinitionBundleId: bundle[0].Id, DefType, Format, Source });
         }
     }
-    function getAuraDefTypeFromDocument(doc: vscode.TextDocument) {
+    /*function getAuraDefTypeFromDocument(doc: vscode.TextDocument) {
         var extension: string = ext.toLowerCase();
         switch (extension) {
             case 'app':
@@ -274,7 +277,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
         // PROVIDER — reserved for future use
         // TESTSUITE — reserved for future use
         // MODEL — deprecated, do not use
-    }
+    }*/
     function getAuraFormatFromDocument(doc: vscode.TextDocument) {
         // is 'js', 'css', or 'xml'
         switch (ext) {
@@ -302,13 +305,15 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             // Create Lightning Component Bundle
             return vscode.window.forceCode.conn.tooling.sobject('LightningComponentBundle').create({
                 'FullName': name,
-                'Metadata': {}
+                'Metadata': { apiVersion: vscode.window.forceCode.version || vscode.window.forceCode.conn.version || 45.0 }
             }).then(bundle => {
-                updateBundle(bundle)
-                .then(bundle => {
-                    results[0] = [bundle];
-                    resolve(results);
-                })
+                if (bundle.success) {
+                    var b = { Id: bundle.id };
+                    updateBundle(b)
+                    .then(bundle => {
+                        resolve([bundle]);
+                    })
+                }
             });
         } else {
             updateBundle(results[0])
@@ -340,7 +345,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                                 }
                                 md['targets'] = result.LightningComponentBundle.targets;
                             } else {
-                                md['targets'] = ""
+                                md['targets'] = null
                             }
 
                             if (result.LightningComponentBundle.hasOwnProperty('isExposed')) {
@@ -364,7 +369,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                             if (result.LightningComponentBundle.hasOwnProperty('description')) {
                                 md['description'] = result.LightningComponentBundle.description
                             } else {
-                                md['description'] = ""
+                                md['description'] = null
                             }
 
                             if (result.LightningComponentBundle.hasOwnProperty('targetConfigs')) {
@@ -545,10 +550,25 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
 
         }
         function addMember(records) {
+            let md = {}
+            
+            if (fs.existsSync(`${document.fileName}-meta.xml`)) {
+                var xmlMeta: string = fs.readFileSync(`${document.fileName}-meta.xml`, 'utf-8')
+                parseString(xmlMeta, { explicitArray: false, async: false }, function (err, result) {
+                    if (result.hasOwnProperty(toolingType)) {
+                        delete result[toolingType]['$'];
+                        delete result[toolingType]['_'];
+                        md = result[toolingType]
+                    }
+                })
+            }
             if (records.length > 0) {
                 // Tooling Object already exists
                 //  UPDATE it
                 var record: MetadataResult = records[0];
+                if (md !== {}) {
+                    record.Metadata = md
+                }
                 // Get the modified date of the local file... 
                 var member: {} = {
                     Body: body,
@@ -572,19 +592,19 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                 // Tooling Object does not exist
                 // so we CREATE it
                 fc.statusBarItem.text = 'Creating ' + name;
-                return fc.conn.tooling.sobject(parsers.getToolingType(document, CREATE)).create(createObject(body)).then(foo => {
+                return fc.conn.tooling.sobject(parsers.getToolingType(document, CREATE)).create(createObject(body, md)).then(foo => {
                     return fc;
                 });
             }
         }
 
-        function createObject(text: string): {} {
+        function createObject(text: string, metadata: {}): {} {
             if (toolingType === 'ApexClass') {
-                return { Body: text };
+                return { Body: text, Metadata: metadata };
             } else if (toolingType === 'ApexTrigger') {
                 let matches: RegExpExecArray = /\btrigger\b\s\w*\s\bon\b\s(\w*)\s\(/.exec(text);
                 if (matches) {
-                    return { Body: text, TableEnumOrId: matches[1] };
+                    return { Body: text, TableEnumOrId: matches[1], Metadata: metadata };
                 } else {
                     throw { message: 'Could not get object name from Trigger' };
                 }
@@ -593,9 +613,10 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                     Markup: text,
                     Masterlabel: name + 'Label',
                     Name: name,
+                    Metadata: metadata
                 };
             }
-            return { Body: text };
+            return { Body: text, Metadata: metadata };
         }
     }
     // =======================================================================================================================================
@@ -782,4 +803,29 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
     }
 
     // =======================================================================================================================================
+}
+
+export function autoCompile(context: vscode.ExtensionContext): Promise<any> {
+    return new Promise((resolve, reject) => {
+        configuration().then(config => {
+            resolve(getAutoCompile(config)
+            .then(config => generateConfigFile(config)))
+        })
+        .catch(err => reject(err))
+        
+        function getAutoCompile(config: forceCode.Config) {
+            let options: vscode.QuickPickItem[] = [{
+                description: 'Automatically deploy/compile files on save',
+                label: 'Yes',
+            }, {
+                description: 'Deploy/compile code through the ForceCode menu',
+                label: 'No',
+            },
+            ];
+            return vscode.window.showQuickPick(options, { ignoreFocusOut: true }).then((res: vscode.QuickPickItem) => {
+                config.autoCompile = res.label === 'Yes';
+                return config;
+            });
+        }
+    })
 }

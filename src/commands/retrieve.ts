@@ -207,7 +207,7 @@ export default function retrieve(context: vscode.ExtensionContext, document?: vs
                             singlePackage: true,
                             //specificFiles: files,
                             unpackaged: { types: retrieveTypes },
-                            apiVersion: vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version,
+                            apiVersion: vscode.window.forceCode.version || vscode.window.forceCode.conn.version,
                         }).stream());
                     });
 
@@ -232,7 +232,7 @@ export default function retrieve(context: vscode.ExtensionContext, document?: vs
                     });
                     resolve(vscode.window.forceCode.conn.metadata.retrieve({
                         unpackaged: { types: types },
-                        apiVersion: vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version,
+                        apiVersion: vscode.window.forceCode.version || vscode.window.forceCode.conn.version,
                     }).stream());
                 });
             }
@@ -253,7 +253,7 @@ export default function retrieve(context: vscode.ExtensionContext, document?: vs
             function packaged() {
                 resolve(vscode.window.forceCode.conn.metadata.retrieve({
                     packageNames: [option.description],
-                    apiVersion: vscode.window.forceCode.config.apiVersion || vscode.window.forceCode.conn.version,
+                    apiVersion: vscode.window.forceCode.version || vscode.window.forceCode.conn.version,
                 }).stream());
             }
 

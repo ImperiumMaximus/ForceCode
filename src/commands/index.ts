@@ -21,11 +21,15 @@ import staticResource from './staticResource';
 import codeCompletionRefresh from './codeCompletionRefresh';
 import toql from './toql';
 import {staticResourceDeployFromFile} from './staticResource';
+import {autoCompile} from './compile';
+import {setActive} from './credentials';
 
 export {
     PeekFileDefinitionProvider,
     apexTest,
     compile,
+    autoCompile,
+    setActive,
     createClass,
     createLwc,
     credentials,
