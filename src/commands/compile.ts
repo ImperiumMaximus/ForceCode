@@ -305,13 +305,15 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
             // Create Lightning Component Bundle
             return vscode.window.forceCode.conn.tooling.sobject('LightningComponentBundle').create({
                 'FullName': name,
-                'Metadata': {}
+                'Metadata': { apiVersion: vscode.window.forceCode.version || vscode.window.forceCode.conn.version || 45.0 }
             }).then(bundle => {
-                updateBundle(bundle)
-                .then(bundle => {
-                    results[0] = [bundle];
-                    resolve(results);
-                })
+                if (bundle.success) {
+                    var b = { Id: bundle.id };
+                    updateBundle(b)
+                    .then(bundle => {
+                        resolve([bundle]);
+                    })
+                }
             });
         } else {
             updateBundle(results[0])
@@ -343,7 +345,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                                 }
                                 md['targets'] = result.LightningComponentBundle.targets;
                             } else {
-                                md['targets'] = ""
+                                md['targets'] = null
                             }
 
                             if (result.LightningComponentBundle.hasOwnProperty('isExposed')) {
@@ -367,7 +369,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                             if (result.LightningComponentBundle.hasOwnProperty('description')) {
                                 md['description'] = result.LightningComponentBundle.description
                             } else {
-                                md['description'] = ""
+                                md['description'] = null
                             }
 
                             if (result.LightningComponentBundle.hasOwnProperty('targetConfigs')) {
