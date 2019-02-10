@@ -593,18 +593,30 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                 // so we CREATE it
                 fc.statusBarItem.text = 'Creating ' + name;
                 return fc.conn.tooling.sobject(parsers.getToolingType(document, CREATE)).create(createObject(body, md)).then(foo => {
-                    return fc;
+                    if (foo.success) {
+                        var member: {} = {
+                            Body: body,
+                            ContentEntityId: foo.id,
+                            Id: fc.containerId,
+                            Metadata: md,
+                            MetadataContainerId: fc.containerId,
+                        };
+                        return fc.conn.tooling.sobject(parsers.getToolingType(document, UPDATE)).create(member).then(res => {
+                            fc.containerMembers.push({ name, id: res['id'] });
+                            return fc;
+                        });
+                    }
                 });
             }
         }
 
         function createObject(text: string, metadata: {}): {} {
             if (toolingType === 'ApexClass') {
-                return { Body: text, Metadata: metadata };
+                return { Body: text };
             } else if (toolingType === 'ApexTrigger') {
                 let matches: RegExpExecArray = /\btrigger\b\s\w*\s\bon\b\s(\w*)\s\(/.exec(text);
                 if (matches) {
-                    return { Body: text, TableEnumOrId: matches[1], Metadata: metadata };
+                    return { Body: text, TableEnumOrId: matches[1] };
                 } else {
                     throw { message: 'Could not get object name from Trigger' };
                 }

@@ -69,18 +69,48 @@ export default {
         icon: 'file-zip',
         label: 'Build Resource Bundle',
     },
+    create: {
+        description: 'Create a new compiled object.',
+        detail: 'Supported objects are Class, Trigger, Apex Page, Apex Component and Aura / Lightning Web Component',
+        icon: 'plus',
+        label: 'Create',
+    },
     // Create Classes
     createClass: {
-        description: 'Create a Repository, Model, Service, Controller, or Custom class.',
-        detail: 'Creates classes based on common separation of concerns patterns',
-        icon: 'plus',
-        label: 'Create Class',
+        description: 'Create a new class',
+        detail: 'A class is a template or blueprint from which objects are created. An object is an instance of a class',
+        icon: 'code',
+        label: 'Apex Class',
+    },
+    createTrigger: {
+        description: 'Create a new trigger',
+        detail: 'Apex triggers enable you to perform custom actions before or after changes to records',
+        icon: 'zap',
+        label: 'Apex Trigger',
+    },
+    createApexPage: {
+        description: 'Create a new Visualforce Page',
+        detail: 'A Visualforce page is similar to a standard Web page',
+        icon: 'file-text',
+        label: 'Visualforce',
+    },
+    createApexComponent: {
+        description: 'Create a new Visualforce Component',
+        detail: 'Visualforce components are small, reusable pieces of functionality used in Visualforce pages',
+        icon: 'file-code',
+        label: 'Visualforce Component',
+    },
+    createAuraComponent: {
+        description: 'Create a new Aura Component',
+        detail: 'Aura components are the self-contained and reusable units of an app',
+        icon: 'code',
+        label: 'Aura Component', 
     },
     createLwc: {
         description: 'Create a Lightning Web Component',
-        detail: 'Creates a dummy Lightning Web Component',  
-        icon: 'plus',
-        label: 'Create LWC',
+        detail: 'Lightning web components are custom HTML elements built using HTML and modern JavaScript',  
+        icon: 'code',
+        label: 'Lightning Web Component',
     },
     // Run current Unit tests
     runUnitTests: {
