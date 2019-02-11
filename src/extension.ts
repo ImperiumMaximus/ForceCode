@@ -8,11 +8,18 @@ import * as commands from './commands';
 import * as parsers from './parsers';
 import * as path from 'path';
 import SoqlCompletionProvider from './providers/SoqlCompletion';
+import { ApexClassCoverageModel, ApexClassCoverageTreeDataProvider } from './models/codeCoverage';
 
 export function activate(context: vscode.ExtensionContext): any {
     vscode.window.forceCode = new ForceService();
 
     console.log(require.resolve('jsforce', {paths: [__dirname, '..']}));
+
+    const apexClassCoverageModel = new ApexClassCoverageModel(context); 
+    const apexCodeCoverageTreeDataProvider = new ApexClassCoverageTreeDataProvider(apexClassCoverageModel)
+    vscode.window.registerTreeDataProvider('codeCoverage', apexCodeCoverageTreeDataProvider);
+    vscode.commands.registerCommand('codeCoverage.refresh', () => apexCodeCoverageTreeDataProvider.refresh());
+
 
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('forcecode', new ForceCodeContentProvider()));
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('sflog', new ForceCodeLogProvider()));

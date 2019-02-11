@@ -8,6 +8,9 @@ import { getAuraDefTypeFromFilename } from '../parsers/getName';
  * Salesforce Content Provider class.
  * This class provides an easy way to retrieve files as a native VSCode.Uri
  */
+
+export const PROVIDER: string = 'forcecode://salesforce.com';
+
 export default class ForceCodeContentProvider
   implements vscode.TextDocumentContentProvider {
   /**

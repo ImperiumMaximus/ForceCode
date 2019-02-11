@@ -1,8 +1,7 @@
 import * as vscode from 'vscode';
 import * as parsers from '../parsers';
 import * as error from '../util/error';
-
-const PROVIDER: string = 'forcecode://salesforce.com';
+import { PROVIDER } from '../providers/ContentProvider';
 
 export default function diff(document: vscode.TextDocument, context: vscode.ExtensionContext) {
     var uri = PROVIDER + '/';

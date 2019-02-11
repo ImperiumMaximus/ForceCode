@@ -93,6 +93,14 @@
         "command": "ForceCode.soql",
         "title": "Force: Run a SOQL Query",
         "description": "Run SOQL Query Under cursor"
+      },
+      {
+        "command": "codeCoverage.refresh",
+				"title": "Refresh",
+				"icon": {
+					"light": "./images/light/refresh.svg",
+					"dark": "./images/dark/refresh.svg"
+				}
       }
     ],
     "keybindings": [
@@ -290,19 +298,26 @@
           "command": "ForceCode.compile",
           "group": "ForceCode"
         }
+      ],
+      "view/title": [
+        {
+          "command": "codeCoverage.refresh",
+					"when": "view == codeCoverage",
+					"group": "navigation"
+        }
       ]
     },
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "package-explorer",
-          "title": "Package Explorer",
+          "id": "forcecode",
+          "title": "ForceCode",
           "icon": "images/dep.svg"
         }
       ]
     },
     "views": {
-      "package-explorer": [
+      "forcecode": [
         {
           "id": "remoteMetadata",
           "name": "Remote"
@@ -310,6 +325,10 @@
         {
           "id": "localMetadata",
           "name": "Local"
+        },
+        {
+          "id": "codeCoverage",
+          "name": "Overall Code Coverage"
         }
       ]
     }
