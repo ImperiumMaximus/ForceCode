@@ -15,11 +15,8 @@ export function activate(context: vscode.ExtensionContext): any {
 
     console.log(require.resolve('jsforce', {paths: [__dirname, '..']}));
 
-    const apexClassCoverageModel = new ApexClassCoverageModel(context); 
-    const apexCodeCoverageTreeDataProvider = new ApexClassCoverageTreeDataProvider(apexClassCoverageModel)
-    vscode.window.registerTreeDataProvider('codeCoverage', apexCodeCoverageTreeDataProvider);
-    vscode.commands.registerCommand('codeCoverage.refresh', () => apexCodeCoverageTreeDataProvider.refresh());
-
+    vscode.window.registerTreeDataProvider('codeCoverage', vscode.window.forceCode.codeCoverageTreeProvider);
+    vscode.commands.registerCommand('codeCoverage.refresh', () => vscode.window.forceCode.codeCoverageTreeProvider.refresh());
 
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('forcecode', new ForceCodeContentProvider()));
     context.subscriptions.push(vscode.workspace.registerTextDocumentContentProvider('sflog', new ForceCodeLogProvider()));
@@ -124,7 +121,7 @@ export function activate(context: vscode.ExtensionContext): any {
 
     if (vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0) {
         context.subscriptions.push(vscode.workspace.createFileSystemWatcher(path.join(vscode.workspace.workspaceFolders[0].uri.fsPath, 'force.json')).onDidChange(uri => { 
-            vscode.window.forceCode.connect(context)
+            vscode.window.forceCode.connect()
         }));
     }
 

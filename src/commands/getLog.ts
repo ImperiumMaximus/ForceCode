@@ -25,7 +25,7 @@ export default function getLog(context: vscode.ExtensionContext) {
     // Login, then get Identity info, 
     //  then get info about the logs and ask the user which one to open, 
     //  then get the log and show it
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(setConnection)
         .then(getLast10Logs)
         .then(displayOptions)

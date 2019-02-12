@@ -9,7 +9,7 @@ export default function showMenu(context: vscode.ExtensionContext) {
     } else {
         vscode.window.forceCode.statusBarItem.text = 'ForceCode Menu';
     }
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(svc => displayMenu())
         .then(res => processResult(res))
         .then(finished)

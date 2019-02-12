@@ -3,7 +3,7 @@ import * as ccr from '../dx/generator';
 import {SObjectCategory} from '../dx/describe';
 
 export default function codeCompletionRefresh(context: vscode.ExtensionContext): Promise<any> { 
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(refreshCodeCompletion);
 }
 

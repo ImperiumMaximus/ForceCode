@@ -22,7 +22,7 @@ export default function executeAnonymous(document: vscode.TextDocument, context:
   let loggerSvc = new Logger(context);
   // vscode.window.forceCode = vscode.window.forceCode;
   // vscode.window.forceCode.outputChannel = ;
-  return vscode.window.forceCode.connect(context)
+  return vscode.window.forceCode.connect()
     .then(svc => loggerSvc.createDebugLevel(null))
     .then(loggerSvc.enableLogging)
     .then(any => invokeExecuteAnonymous(apexBody))

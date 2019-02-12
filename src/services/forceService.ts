@@ -10,6 +10,7 @@ import * as commands from '../commands';
 import { SuccessResult, ErrorResult, RecordResult, ConnectionOptions, ListMetadataQuery, FileProperties, UserInfo } from 'jsforce';
 import { resolve } from 'dns';
 import { addOrg } from '../commands/credentials';
+import { ApexClassCoverageTreeDataProvider, ApexClassCoverageModel } from '../models/codeCoverage';
 const jsforce: any = require('jsforce');
 const pjson: any = require('./../../../package.json');
 const fetch = require('node-fetch');
@@ -37,6 +38,7 @@ export default class ForceService implements forceCode.IForceService {
   public workspaceRoot: string;
   public workspaceMembers: forceCode.IWorkspaceMember[];
   public diagnosticCollection: vscode.DiagnosticCollection;
+  public codeCoverageTreeProvider: ApexClassCoverageTreeDataProvider;
 
   constructor() {
     // Set the ForceCode configuration
@@ -61,6 +63,9 @@ export default class ForceService implements forceCode.IForceService {
     this.containerMembers = [];
     this.apexMetadata = [];
     this.declarations = {};
+
+    const apexClassCoverageModel = new ApexClassCoverageModel(); 
+    this.codeCoverageTreeProvider = new ApexClassCoverageTreeDataProvider(apexClassCoverageModel)
     configuration(this)
       .then(config => {
         this.username = config.username || '';
@@ -68,6 +73,8 @@ export default class ForceService implements forceCode.IForceService {
           loginUrl: config.url || 'https://login.salesforce.com'
         });
         this.statusBarItem.text = `ForceCode ${pjson.version} is Active`;
+
+        
         this.currentOrgStatusBarItem.text = config.active !== undefined && config.orgs[config.active] ? config.orgs[config.active].name : 'No active Org';
       })
       .catch(err => {
@@ -200,6 +207,7 @@ export default class ForceService implements forceCode.IForceService {
         .then(getPublicDeclarations)
         .then(getPrivateDeclarations)
         .then(getManagedDeclarations)
+        .then(refreshCodeCoverage)
         .catch(err => {
           if (self.userInfo) { self.userInfo = undefined; }
           error.outputError(err, vscode.window.forceCode.outputChannel) 
@@ -315,6 +323,10 @@ export default class ForceService implements forceCode.IForceService {
               .then(res => accumulateAllRecords(res, accumulator));
           }
         }
+      }
+      function refreshCodeCoverage(svc) {
+        this.codeCoverageTreeProvider.refresh();
+        return svc;
       }
     } else {
       // self.outputChannel.appendLine(`Connected as ` + self.config.username);

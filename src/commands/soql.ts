@@ -91,7 +91,7 @@ export default function soql(context: vscode.ExtensionContext): Promise<any> {
     let errors = undefined;
     let diagnosticCollection: vscode.DiagnosticCollection;
 
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(svc => getSoqlQuery(svc))
         .then(finished, onError);
 

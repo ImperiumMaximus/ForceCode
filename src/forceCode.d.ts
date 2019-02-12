@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 // import jsforce = require('jsforce');
 import * as jsforce from 'jsforce';
 import { FileProperties, Connection, UserInfo } from 'jsforce';
+import { ApexClassCoverageTreeDataProvider } from './models/codeCoverage';
 
 declare module 'vscode' {
     export namespace window {
@@ -162,7 +163,8 @@ export interface IForceService {
     statusBarItem: vscode.StatusBarItem;
     currentOrgStatusBarItem: vscode.StatusBarItem;
     diagnosticCollection: vscode.DiagnosticCollection;
-    connect(context: vscode.ExtensionContext): Promise<IForceService>;
+    codeCoverageTreeProvider: ApexClassCoverageTreeDataProvider;
+    connect(): Promise<IForceService>;
     newContainer(force: Boolean): Promise<IForceService>;
     clearLog(): void;
     refreshApexMetadata(): Promise<any>;

@@ -55,7 +55,7 @@ export default function retrieve(context: vscode.ExtensionContext, document?: vs
             buffer = '';
         }
     }(fs));
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(svc => showPackageOptions(svc.conn))
         .then(getPackage)
         .then(processResult)

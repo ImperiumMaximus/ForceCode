@@ -52,7 +52,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
         // This process uses the Metadata API to deploy specific files
         // This is where we extend it to create any kind of metadata
         // Currently only Objects and Permission sets ...
-        return vscode.window.forceCode.connect(context)
+        return vscode.window.forceCode.connect()
             .then(createMetaData)
             .then(compileMetadata)
             .then(reportMetadataResults)
@@ -68,7 +68,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
         Source = document.getText();
         // Aura Bundles are a special case, since they can be upserted with the Tooling API
         // Instead of needing to be compiled, like Classes and Pages..
-        return vscode.window.forceCode.connect(context)
+        return vscode.window.forceCode.connect()
             .then(svc => getAuraBundle(svc)
                 .then(ensureAuraBundle)
                 .then(bundle => getAuraDefinition(svc, bundle)
@@ -82,7 +82,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
         Source = document.getText();
         FilePath = document.fileName.substring(document.fileName.lastIndexOf('/src/lwc') + 5);
 
-        return vscode.window.forceCode.connect(context)
+        return vscode.window.forceCode.connect()
             .then(svc => getLWCBundle(svc)
             .then(ensureLWCBundle)
             .then(bundle => getLWCResource(svc, bundle)
@@ -116,7 +116,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
         }, 50);
 
         vscode.window.forceCode.isCompiling = true;
-        return vscode.window.forceCode.connect(context)
+        return vscode.window.forceCode.connect()
             .then(addToContainer)
             .then(requestCompile)
             .then(getCompileStatus)
@@ -723,6 +723,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
     }
     function containerFinished(createNewContainer: boolean): any {
         // We got some records in our response
+        vscode.window.forceCode.codeCoverageTreeProvider.refresh();
         vscode.window.forceCode.isCompiling = false;
         return vscode.window.forceCode.newContainer(createNewContainer).then(res => {
             if (vscode.window.forceCode.queueCompile) {

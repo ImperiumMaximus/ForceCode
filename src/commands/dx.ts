@@ -66,7 +66,7 @@ export default function open(context: vscode.ExtensionContext) {
     const alm: any = require('salesforce-alm');
     vscode.window.forceCode.statusBarItem.text = 'DX Menu';
 
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(svc => showFileOptions())
         .then(getCommand)
         .then(runCommand)

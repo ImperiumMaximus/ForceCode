@@ -43,7 +43,7 @@ export default function deploy(context: vscode.ExtensionContext) {
         pollTimeout: vscode.window.forceCode.config.pollTimeout ? (vscode.window.forceCode.config.pollTimeout * 1000) : 600000,
     };
 
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(deployPackage)
         .then(finished)
         .catch(onError);

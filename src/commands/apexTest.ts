@@ -24,7 +24,7 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
     var Id: string = undefined;
     /* tslint:enable */
     // Start doing stuff
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(svc => getClassInfo(svc))
         .then(id => runCurrentTests(id))
         .then(waitAsyncJob)
@@ -95,6 +95,7 @@ export default function apexTest(document: vscode.TextDocument, context: vscode.
     function showResult(asyncJobId) {
         return new Promise((resolve, reject) => {
             configuration().then(results => {
+                vscode.window.forceCode.codeCoverageTreeProvider.refresh();
                 vscode.window.forceCode.outputChannel.clear();
                 vscode.window.forceCode.conn.tooling
                     .query(`SELECT ApexLogId, Outcome, StackTrace, ApexClass.Name, Message, MethodName, RunTime, TestTimestamp FROM ApexTestResult WHERE AsyncApexJobId = '${asyncJobId}'`)

@@ -17,11 +17,11 @@ export class ApexClassCoverageModel {
 
   private nodes: Map<string, ApexClassCoverageNode> = new Map<string, ApexClassCoverageNode>();
 
-  constructor(private context: vscode.ExtensionContext) {
+  constructor() {
   }
 
   public get roots(): Thenable<ApexClassCoverageNode[]> {
-    return vscode.window.forceCode.connect(this.context)
+    return vscode.window.forceCode.connect()
       .then(retrieveClasses)
       .then(filterClasses)
       .then(retrieveCoverage)

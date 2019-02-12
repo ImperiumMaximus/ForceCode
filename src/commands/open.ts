@@ -13,7 +13,7 @@ export default function open(context: vscode.ExtensionContext) {
   vscode.window.forceCode.statusBarItem.text = 'ForceCode: Open File';
 
   return vscode.window.forceCode
-    .connect(context)
+    .connect()
     .then(svc => showFileOptions())
     .then(opt => getFile(opt))
     .then(res => writeFiles(res))

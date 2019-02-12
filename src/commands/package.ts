@@ -8,7 +8,7 @@ import * as error from '../util/error';
 export default function generate(context: vscode.ExtensionContext) {
     vscode.window.forceCode.statusBarItem.text = 'ForceCode: Package-xml';
     vscode.window.forceCode.outputChannel.clear();
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         // .then(svc => generator({}))
         .then(finished)
         .catch(onError);

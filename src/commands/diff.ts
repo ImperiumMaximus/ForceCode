@@ -19,7 +19,7 @@ export default function diff(document: vscode.TextDocument, context: vscode.Exte
     uri += fileName;
     
     // vscode.window.forceCode.statusBarItem.text = 'ForceCode: Diffing';
-    return vscode.window.forceCode.connect(context)
+    return vscode.window.forceCode.connect()
         .then(diffFile)
         .catch(err => error.outputError({ message: err.toString() }, vscode.window.forceCode.outputChannel));
     // .then(finished)
