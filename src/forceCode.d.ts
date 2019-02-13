@@ -102,6 +102,7 @@ interface IDeclarations {
 interface IContainerMember {
     name: string;
     id: string;
+    entityId: string;
 }
 
 interface IMetadataObject {

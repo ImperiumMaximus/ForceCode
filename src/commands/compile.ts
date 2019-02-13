@@ -580,7 +580,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                 return shouldCompile(record).then(should => {
                     if (should) {
                         return fc.conn.tooling.sobject(parsers.getToolingType(document, UPDATE)).create(member).then(res => {
-                            fc.containerMembers.push({ name, id: res['id'] });
+                            fc.containerMembers.push({ name, id: res['id'], entityId: record.Id });
                             return fc;
                         });
                     } else {
@@ -602,7 +602,7 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
                             MetadataContainerId: fc.containerId,
                         };
                         return fc.conn.tooling.sobject(parsers.getToolingType(document, UPDATE)).create(member).then(res => {
-                            fc.containerMembers.push({ name, id: res['id'] });
+                            fc.containerMembers.push({ name, id: res['id'], entityId: foo.id.toString() });
                             return fc;
                         });
                     }
@@ -723,6 +723,9 @@ export default function compile(document: vscode.TextDocument, context: vscode.E
     }
     function containerFinished(createNewContainer: boolean): any {
         // We got some records in our response
+        vscode.window.forceCode.containerMembers.forEach(member => {
+            vscode.window.forceCode.codeCoverageTreeProvider.invalidateNode(member.entityId);
+        });
         vscode.window.forceCode.codeCoverageTreeProvider.refresh();
         vscode.window.forceCode.isCompiling = false;
         return vscode.window.forceCode.newContainer(createNewContainer).then(res => {

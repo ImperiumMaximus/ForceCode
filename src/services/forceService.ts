@@ -325,7 +325,7 @@ export default class ForceService implements forceCode.IForceService {
         }
       }
       function refreshCodeCoverage(svc) {
-        this.codeCoverageTreeProvider.refresh();
+        self.codeCoverageTreeProvider.refresh();
         return svc;
       }
     } else {
