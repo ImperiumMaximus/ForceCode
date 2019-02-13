@@ -17,13 +17,14 @@ export interface ApexClassCoverageNode {
 
 export class ApexClassCoverageModel {
 
-  private nodes: Map<string, ApexClassCoverageNode> = new Map<string, ApexClassCoverageNode>();
+  public nodes: Map<string, ApexClassCoverageNode> = new Map<string, ApexClassCoverageNode>();
 
   constructor() {
   }
 
   public invalidateNode(id: string) {
     if (this.nodes.has(id)) {
+      this.nodes.get('').valid = false
       this.nodes.get(id).valid = false
     }
   }
@@ -46,8 +47,7 @@ export class ApexClassCoverageModel {
       .then(retrieveClasses)
       .then(filterClasses)
       .then(retrieveCoverage)
-      .then(retrieveOverall)
-
+      .then(retrieveOverallCov)
 
     function retrieveClasses(svc) {
       if (vscode.window.forceCode.userInfo !== undefined) {
@@ -91,19 +91,31 @@ export class ApexClassCoverageModel {
       return coverageRecords;
     }
 
-    async function retrieveOverall(nodes: Array<ApexClassCoverageNode>) {
-      var orgWideCoverage = await vscode.window.forceCode.conn.tooling.query('SELECT PercentCovered from ApexOrgWideCoverage')
-      nodes.unshift({
-        resource: vscode.Uri.parse(`Overall`),
-        label: 'Overall',
-        coveragePercent: orgWideCoverage.records[0].PercentCovered.toFixed(0) + '%',
-        coveredLines: 0,
-        uncoveredLines: 0,
-        isOverall: true,
-        valid: true
-      });
-      return nodes;
+    function retrieveOverallCov(nodes: Array<ApexClassCoverageNode>) {
+      return self.retrieveOverall()
+      .then(node => { 
+        nodes.unshift(node)
+        self.nodes.set('', node);
+        return nodes;
+      })
     }
+  }
+
+  public retrieveOverall(): Thenable<ApexClassCoverageNode> {
+    return vscode.window.forceCode.conn.tooling.query('SELECT PercentCovered from ApexOrgWideCoverage')
+    .then(res => {
+      if (res.records.length === 1) {
+        return {
+          resource: vscode.Uri.parse(`Overall`),
+          label: 'Overall',
+          coveragePercent: res.records[0].PercentCovered.toFixed(0) + '%',
+          coveredLines: 0,
+          uncoveredLines: 0,
+          isOverall: true,
+          valid: true
+        }
+      }
+    })
   }
 
   public retrieveSingleCoverage(id: string): Thenable<ApexClassCoverageNode> {
@@ -140,6 +152,7 @@ export class ApexClassCoverageTreeDataProvider implements vscode.TreeDataProvide
       this.model.invalidatedNodes.forEach(node => {
         this._onDidChangeTreeData.fire(node);
       })
+      this._onDidChangeTreeData.fire(this.model.nodes.get(''));
     } else {
       this._onDidChangeTreeData.fire(item);
     }
@@ -152,11 +165,16 @@ export class ApexClassCoverageTreeDataProvider implements vscode.TreeDataProvide
 	public getTreeItem(element: ApexClassCoverageNode): vscode.TreeItem | Thenable<vscode.TreeItem> {
     if (element.valid) {
       return new ApexClassCoverageItem(element.label, element.coveredLines, element.uncoveredLines, element.coveragePercent, void 0, null, element.isOverall);
+    } else if (element.isOverall) {
+      return this.model.retrieveOverall()
+      .then(e => {
+        return new ApexClassCoverageItem(e.label, e.coveredLines, e.uncoveredLines, e.coveragePercent, void 0, null, e.isOverall);
+      });
     } else {
       return this.model.retrieveSingleCoverage(element.id)
       .then(e => {
         return new ApexClassCoverageItem(e.label, e.coveredLines, e.uncoveredLines, e.coveragePercent, void 0, null, e.isOverall);
-      })
+      });
     }
 	}
 
