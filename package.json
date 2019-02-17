@@ -96,11 +96,11 @@
       },
       {
         "command": "codeCoverage.refresh",
-				"title": "Refresh",
-				"icon": {
-					"light": "./images/light/refresh.svg",
-					"dark": "./images/dark/refresh.svg"
-				}
+        "title": "Refresh",
+        "icon": {
+          "light": "./images/light/refresh.svg",
+          "dark": "./images/dark/refresh.svg"
+        }
       }
     ],
     "keybindings": [
@@ -302,8 +302,8 @@
       "view/title": [
         {
           "command": "codeCoverage.refresh",
-					"when": "view == codeCoverage",
-					"group": "navigation"
+          "when": "view == codeCoverage",
+          "group": "navigation"
         }
       ]
     },
@@ -357,7 +357,7 @@
     "json-query": "^2.2.2",
     "jszip": "^3.1.5",
     "klaw": "^2.1.1",
-    "lodash": "^4.17.10",
+    "lodash": "^4.17.11",
     "moment": "^2.22.2",
     "node-fetch": "^2.1.2",
     "node-zip": "^1.1.1",
@@ -373,8 +373,8 @@
     "@types/jsforce": "^1.8.13",
     "@types/mocha": "^5.2.5",
     "@types/node": "^10.5.2",
-    "mocha": "^5.0.4",
     "antlr4ts-cli": "^0.4.0-alpha.4",
-    "vscode": "^1.1.18"
+    "mocha": "^5.0.4",
+    "vscode": "^1.1.29"
   }
 }
